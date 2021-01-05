@@ -79,7 +79,7 @@ hash(PipelineLayout const* pipelineLayout, FNVHash prev)
 FNVHash
 hash(Pipeline1 const* pipeline, FNVHash prev)
 {
-  return hash(&pipeline, sizeof(*pipeline));
+  return hash(pipeline, sizeof(*pipeline));
 }
 
 VkRenderPass

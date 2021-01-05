@@ -106,8 +106,8 @@ basic()
   Swapchain swapchain = device->CreateSwapchain(swapchainCreateInfo);
 
   PipelineState state = {};
-  state.shader.vertexShader = "shaders/default.vert.spv";
-  state.shader.fragmentShader = "shaders/default.frag.spv";
+  state.shader.vertexShader = "resources/shaders/default.vert.spv";
+  state.shader.fragmentShader = "resources/shaders/default.frag.spv";
 
   state.vertexInput.bindingDescriptions[0].binding = 0;
   state.vertexInput.bindingDescriptions[0].inputRate = VertexInputRate::VERTEX;

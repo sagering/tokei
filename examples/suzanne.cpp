@@ -178,8 +178,8 @@ suzanne()
   mvp.view = glm::identity<glm::mat4>();
   mvp.proj = glm::identity<glm::mat4>();
 
-  mvp.model = glm::scale(mvp.model, glm::vec3{ 0.7, -0.7, 0.1 });
-  mvp.model = glm::translate(mvp.model, glm::vec3{ 0, 0, 0.5 });
+  mvp.model = glm::scale(mvp.model, glm::vec3{ 0.7f, -0.7f, 0.1f }); // scale down, flip y
+  mvp.model = glm::translate(mvp.model, glm::vec3{ 0, 0, 1.f }); // move closer
 
   Buffer uniformBuffer;
   void* data;
