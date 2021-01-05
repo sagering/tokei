@@ -1,6 +1,8 @@
 # tokei
 An experimental render engine based on Vulkan.
 
+![alt text](screenshot.jpg)
+
 ## build
 
 This library has only been tested on Windows 10 so far. It is not expected to work on other platforms yet, due to platform specific surface creation code. Use Cmake to generate a visual studio project.
