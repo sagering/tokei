@@ -208,10 +208,25 @@ basic()
     for (auto i = 0; i < 2; ++i) {
       CmdBuffer* cmdBuffer = device->GetCmdBuffer();
 
-      cmdBuffer->BeginCopyPass();
       cmdBuffer->Copy(vertexBuffer, stagingBuffer);
+
+      cmdBuffer->TextureBarrier({ TextureBarrierScope::None,
+                                  TextureBarrierScope::TransferDst,
+                                  sampledTexture });
+
       cmdBuffer->CopyBufferToTexture(sampledTexture, uniformBuffer);
-      cmdBuffer->EndCopyPass();
+
+      cmdBuffer->BufferBarrier({ BufferBarrierScope::TransferDst,
+                                 BufferBarrierScope::VertexBuffer,
+                                 vertexBuffer });
+
+      cmdBuffer->TextureBarrier({ TextureBarrierScope::TransferDst,
+                                  TextureBarrierScope::SampledTexture,
+                                  sampledTexture });
+
+      cmdBuffer->TextureBarrier({ TextureBarrierScope::None,
+                                  TextureBarrierScope::ColorAttachment,
+                                  swapchainTexture });
 
       RenderPassBeginInfo beginInfo = {};
       beginInfo.attachmentCnt = 1;
@@ -220,7 +235,6 @@ basic()
       beginInfo.attachmentInfos[0].type = AttachmentType::COLOR;
       beginInfo.attachmentInfos[0].loadOp = LoadOp::CLEAR;
       beginInfo.attachmentInfos[0].storeOp = StoreOp::STORE;
-      beginInfo.attachmentInfos[0].makePresentable = true;
       cmdBuffer->BeginRenderPass(beginInfo);
 
       cmdBuffer->SetPipelineState(state);
@@ -232,6 +246,10 @@ basic()
       cmdBuffer->BindVertexBuffer(vertexBuffer, 9 * sizeof(float));
       cmdBuffer->Draw(3);
       cmdBuffer->EndRenderPass();
+
+      cmdBuffer->TextureBarrier({ TextureBarrierScope::ColorAttachment,
+                                  TextureBarrierScope::PresentSrc,
+                                  swapchainTexture });
 
       device->Submit(cmdBuffer);
     }

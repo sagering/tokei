@@ -33,6 +33,16 @@ struct AccessScope
     return !HasWriteFlags() && !HasLayoutChange();
   }
 
+  static inline AccessScope None()
+  {
+    AccessScope scope;
+    scope.stageFlags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    scope.accessFlags = 0;
+    scope.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    scope.finalLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    return scope;
+  }
+
   static inline AccessScope ColorOutputAttachment()
   {
     AccessScope scope;
@@ -190,205 +200,26 @@ struct AccessScope
   }
 };
 
-enum class CmdCode
-{
-  BEGIN_COPY_PASS,
-  END_COPY_PASS,
-  COPY,
-  COPY_BUFFER_TO_TEXTURE,
-  BEGIN_RENDER_PASS,
-  BIND_UNIFORM_BUFFER,
-  BIND_SAMPLER,
-  BIND_SAMPLED_TEXTURE,
-  BIND_PIPELINE,
-  BIND_VERTEX_BUFFER,
-  BIND_INDEX_BUFFER,
-  DRAW,
-  DRAW_INDEXED,
-  END_RENDER_PASS,
-};
-
-struct CopyPars
-{
-  Buffer dst;
-  Buffer src;
-};
-
-struct CopyBufferToTexturePars
-{
-  Texture dst;
-  Buffer src;
-};
-
-struct BindVertexBufferPars
-{
-  Buffer buffer;
-  uint64_t offset;
-};
-
-struct BindIndexBufferPars
-{
-  Buffer buffer;
-};
-
-struct BindUniformBufferPars
-{
-  Buffer buffer;
-  uint32_t set;
-  uint32_t binding;
-};
-
-struct BindSamplerPars
-{
-  uint32_t set;
-  uint32_t binding;
-};
-
-struct BindTexturePars
-{
-  Texture texture;
-  uint32_t set;
-  uint32_t binding;
-};
-
-struct DrawPars
-{
-  uint32_t cnt;
-};
-
-struct DrawIndexedPars
-{
-  uint32_t cnt;
-};
-
-union CmdPars
-{
-  CopyPars copy;
-  CopyBufferToTexturePars copyBufferToTexture;
-  RenderPassBeginInfo beginRenderPassPars;
-  BindVertexBufferPars bindVertexBuffer;
-  BindIndexBufferPars bindIndexBuffer;
-  BindUniformBufferPars bindUniformBuffer;
-  BindSamplerPars bindSampler;
-  BindTexturePars bindSampledTexture;
-  PipelineState* pipelineState;
-  DrawPars draw;
-  DrawIndexedPars drawIndexed;
-};
-
-enum class SyncCmdCode : uint8_t
-{
-  SET_EVENT,
-  WAIT_EVENT,
-  WAIT_SEMAPHORE,
-  BARRIER
-};
-
-enum class ResourceType : uint8_t
-{
-  BUFFER,
-  TEXTURE,
-  SWAPCHAIN
-};
-
-struct SyncCmdPars
-{
-  void* res;
-  ResourceType resType;
-  AccessScope first;
-  AccessScope second;
-};
-
-struct SyncCmd
-{
-  SyncCmdCode code;
-  SyncCmdPars pars;
-};
-
-struct Cmd
-{
-  CmdCode code;
-  CmdPars pars;
-
-  // TODO: size of 4 is probably too small, because BeginRenderPass can hold
-  // many resources that need to be synchronized.
-  SyncCmd syncCmds[4];
-  uint32_t syncCmdCnt = 0;
-};
-
-enum PassType : uint8_t
-{
-  COPY,
-  RENDER
-};
-using PassId = uint32_t;
-
-struct Pass
-{
-  PassId id;
-  PassType type;
-  int startIdx;
-  int endIdx;
-};
-
-struct Operation
-{
-  AccessScope scope;
-  Cmd* cmd;
-  PassId passId;
-};
-
-struct SynchronizationInfo
-{
-  std::vector<Operation> ops;
-
-  AccessScope firstScope;
-  Cmd* firstCmd = nullptr;
-
-  AccessScope lastScope;
-  Cmd* lastCmd = nullptr;
-
-  void Coalesce(void* res, ResourceType resType, AccessScope prev);
-};
-
 class VulkanDevice;
 
 struct VulkanCmdBufferData
-{
-  VulkanDevice* device = nullptr;
-  VkCommandBuffer cmdBuffer = VK_NULL_HANDLE;
-
-  std::vector<PipelineState> pipelineStates; // store pipeline states separately
-                                             // to keep a single Cmd small
-  std::vector<Cmd> cmds;
-
-  std::vector<Pass> passes;
-
-  std::unordered_map<Buffer, SynchronizationInfo> buffers;
-  std::unordered_map<Texture, SynchronizationInfo> textures;
-};
+{};
 
 class VulkanCmdBuffer : CmdBuffer
 {
 public:
   friend VulkanDevice;
 
-  VulkanCmdBuffer(VulkanDevice* device, VkCommandBuffer cmdBuffer)
-  {
-    data.device = device;
-    data.cmdBuffer = cmdBuffer;
-    // we need stable pointers => reserve as much as needed to not relocate
-    data.cmds.reserve(256);
-    data.pipelineStates.reserve(256);
-  }
+  VulkanCmdBuffer(VulkanDevice* device_, VkCommandBuffer cmdBuffer_)
+    : device(device_)
+    , cmdBuffer(cmdBuffer_)
+  {}
 
-  void BeginCopyPass() override;
   void Copy(Buffer dst, Buffer src) override;
-  void CopyBufferToTexture(Texture dst, Buffer src);
-  void EndCopyPass() override;
+  void CopyBufferToTexture(Texture dst, Buffer src) override;
 
-  virtual void BufferBarrier(BufferBarrierInfo const& info) override;
-  virtual void TextureBarrier(TextureBarrierInfo const& info) override;
+  void BufferBarrier(BufferBarrierInfo const& info) override;
+  void TextureBarrier(TextureBarrierInfo const& info) override;
 
   void BeginRenderPass(RenderPassBeginInfo const& beginInfo) override;
 
@@ -410,15 +241,18 @@ public:
   void EndRenderPass() override;
 
 private:
-  VulkanCmdBufferData data = {};
+  VulkanDevice* device = nullptr;
+  VkCommandBuffer cmdBuffer = VK_NULL_HANDLE;
 
-  void Wait(VkCommandBuffer cmdBuffer, Cmd const& cmd);
-  void Signal(VkCommandBuffer cmdBuffer, Cmd const& cmd);
-
-  void PushOp(AccessScope scope, SynchronizationInfo& syncInfo);
-  void Replay();
-  void ReplayCopyPass(Pass const& pass);
-  void ReplayRenderPass(Pass const& pass);
+  struct CmdBufferState
+  {
+    VkRenderPass renderPass = VK_NULL_HANDLE;
+    std::vector<VkWriteDescriptorSet> descriptorWrites = {};
+    std::vector<uint32_t> descriptorSets = {};
+    std::vector<VkDescriptorBufferInfo> bufferInfos = {};
+    std::vector<VkDescriptorImageInfo> imageInfos = {};
+    PipelineLayout pipelineLayout = {};
+  } cmdBufferState;
 };
 
 class VulkanDevice : public Device
@@ -461,10 +295,18 @@ private:
     std::vector<VkQueueFamilyProperties> queueFamilies = {};
   };
 
+  enum ResourceType
+  {
+    BUFFER,
+    TEXTURE,
+    SWAPCHAIN,
+  };
+
   struct Trash
   {
     struct Resource
     {
+
       void* resource;
       ResourceType type;
     };

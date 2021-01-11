@@ -504,7 +504,6 @@ VulkanDevice::AllocateCmdBuffer()
   auto beginInfo = vkiCommandBufferBeginInfo(nullptr);
   vkBeginCommandBuffer(cmdBuffer, &beginInfo);
 
-  // TODO: reuse VulkanCmdBuffers; an arena allocator could be used here as well
   return new VulkanCmdBuffer(this, cmdBuffer);
 }
 
@@ -523,137 +522,14 @@ VulkanDevice::Submit(CmdBuffer* cmdBuffer_)
   std::vector<VkPipelineStageFlags> waitStages = {};
   std::vector<VkSemaphore> signalSemaphores = {};
 
-  for (auto& kv : cmdBuffer->data.buffers) {
-    auto& buffer = kv.first;
-    auto& syncInfo = kv.second;
-
-    auto bufferInfo = (VulkanDevice::BufferInfo*)buffer;
-
-    syncInfo.Coalesce(
-      bufferInfo, ResourceType::BUFFER, bufferInfo->accessScope);
-
-    if (bufferInfo->sem != VK_NULL_HANDLE) {
-      // Wait semaphore
-      waitSemaphores.push_back(bufferInfo->sem);
-      waitStages.push_back(syncInfo.firstScope.stageFlags);
-      ReleaseSemaphore(&allocator, bufferInfo->sem);
-      bufferInfo->sem = VK_NULL_HANDLE;
-    } else if (bufferInfo->event != VK_NULL_HANDLE) {
-      // Wait event
-      auto cmd = syncInfo.firstCmd;
-      auto syncCmd = &cmd->syncCmds[cmd->syncCmdCnt];
-
-      syncCmd->pars.res = bufferInfo;
-      syncCmd->pars.resType = ResourceType::BUFFER;
-      syncCmd->pars.first = bufferInfo->accessScope;
-      syncCmd->pars.second = syncInfo.firstScope;
-      syncCmd->code = SyncCmdCode::WAIT_EVENT;
-
-      cmd->syncCmdCnt++;
-    }
-
-    bufferInfo->accessScope = syncInfo.lastScope;
-
-    if (bufferInfo->queueCnt > 1) {
-      // Signal semaphore
-      assert(bufferInfo->sem == VK_NULL_HANDLE);
-      auto sem = AllocateSemaphore(&allocator);
-      bufferInfo->sem = sem;
-      signalSemaphores.push_back(bufferInfo->sem);
-    } else {
-      // Signal event
-      auto cmd = syncInfo.lastCmd;
-      auto syncCmd = &cmd->syncCmds[cmd->syncCmdCnt];
-
-      syncCmd->pars.first = syncInfo.lastScope;
-      syncCmd->code = SyncCmdCode::SET_EVENT;
-      syncCmd->pars.res = bufferInfo;
-      syncCmd->pars.resType = ResourceType::BUFFER;
-
-      cmd->syncCmdCnt++;
-    }
-  }
-
-  for (auto& kv : cmdBuffer->data.textures) {
-    auto& texture = kv.first;
-    auto& syncInfo = kv.second;
-
-    auto textureInfo = (VulkanDevice::TextureInfo*)texture;
-
-    syncInfo.Coalesce(
-      textureInfo, ResourceType::TEXTURE, textureInfo->accessScope);
-
-    // Wait semaphore
-    if (textureInfo->sem != VK_NULL_HANDLE) {
-      waitSemaphores.push_back(textureInfo->sem);
-      waitStages.push_back(syncInfo.firstScope.stageFlags);
-      ReleaseSemaphore(&allocator, textureInfo->sem);
-      textureInfo->sem = VK_NULL_HANDLE;
-
-    } else if (textureInfo->event != VK_NULL_HANDLE) {
-      // Wait event
-      auto cmd = syncInfo.firstCmd;
-      auto syncCmd = &cmd->syncCmds[cmd->syncCmdCnt];
-
-      syncCmd->pars.res = textureInfo;
-      syncCmd->pars.resType = ResourceType::TEXTURE;
-      syncCmd->pars.first = textureInfo->accessScope;
-      syncCmd->pars.second = syncInfo.firstScope;
-      syncCmd->code = SyncCmdCode::WAIT_EVENT;
-
-      cmd->syncCmdCnt++;
-    }
-
-    if (textureInfo->event == VK_NULL_HANDLE) {
-      if (textureInfo->accessScope.finalLayout !=
-          syncInfo.firstScope.initialLayout) {
-
-        // barrier
-        auto cmd = syncInfo.firstCmd;
-        auto syncCmd = &cmd->syncCmds[cmd->syncCmdCnt];
-
-        syncCmd->pars.res = textureInfo;
-        syncCmd->pars.resType = ResourceType::TEXTURE;
-        syncCmd->pars.first = textureInfo->accessScope;
-        syncCmd->pars.second = syncInfo.firstScope;
-        syncCmd->code = SyncCmdCode::BARRIER;
-
-        cmd->syncCmdCnt++;
-      }
-    }
-
-    textureInfo->accessScope = syncInfo.lastScope;
-
-    // Signal semaphore
-    if (textureInfo->submitTypeCnt > 1) {
-      assert(textureInfo->sem == VK_NULL_HANDLE);
-      auto sem = AllocateSemaphore(&allocator);
-      textureInfo->sem = sem;
-      signalSemaphores.push_back(textureInfo->sem);
-    } else {
-      // Signal event
-      auto cmd = syncInfo.lastCmd;
-      auto syncCmd = &cmd->syncCmds[cmd->syncCmdCnt];
-
-      syncCmd->pars.first = syncInfo.lastScope;
-      syncCmd->code = SyncCmdCode::SET_EVENT;
-      syncCmd->pars.res = textureInfo;
-      syncCmd->pars.resType = ResourceType::TEXTURE;
-
-      cmd->syncCmdCnt++;
-    }
-  }
-
-  cmdBuffer->Replay();
-
-  vkEndCommandBuffer(cmdBuffer->data.cmdBuffer);
+  vkEndCommandBuffer(cmdBuffer->cmdBuffer);
 
   auto submitInfo =
     vkiSubmitInfo(static_cast<uint32_t>(waitSemaphores.size()),
                   waitSemaphores.data(),
                   waitStages.data(),
                   1,
-                  &cmdBuffer->data.cmdBuffer,
+                  &cmdBuffer->cmdBuffer,
                   static_cast<uint32_t>(signalSemaphores.size()),
                   signalSemaphores.data());
 

@@ -369,10 +369,8 @@ struct BufferBarrierInfo
 class CmdBuffer
 {
 public:
-  virtual void BeginCopyPass() = 0;
   virtual void Copy(Buffer dst, Buffer src) = 0;
   virtual void CopyBufferToTexture(Texture dst, Buffer src) = 0;
-  virtual void EndCopyPass() = 0;
 
   virtual void BufferBarrier(BufferBarrierInfo const& info) = 0;
   virtual void TextureBarrier(TextureBarrierInfo const& info) = 0;

@@ -69,9 +69,7 @@ uploadSuzanne(Device* device, CmdBuffer* cmdBuffer)
     bufferCreateInfo.memoryUsage = MemoryUsage::GPU_ONLY;
     std::tie(result.vbuf, std::ignore) = device->CreateBuffer(bufferCreateInfo);
 
-    cmdBuffer->BeginCopyPass();
     cmdBuffer->Copy(result.vbuf, stagingBuffer);
-    cmdBuffer->EndCopyPass();
 
     device->Release(stagingBuffer);
   }
@@ -99,12 +97,15 @@ uploadSuzanne(Device* device, CmdBuffer* cmdBuffer)
     bufferCreateInfo.memoryUsage = MemoryUsage::GPU_ONLY;
     std::tie(result.ibuf, std::ignore) = device->CreateBuffer(bufferCreateInfo);
 
-    cmdBuffer->BeginCopyPass();
     cmdBuffer->Copy(result.ibuf, stagingBuffer);
-    cmdBuffer->EndCopyPass();
-
     device->Release(stagingBuffer);
   }
+
+  cmdBuffer->BufferBarrier({ BufferBarrierScope::None,
+                             BufferBarrierScope::VertexBuffer,
+                             result.vbuf });
+  cmdBuffer->BufferBarrier(
+    { BufferBarrierScope::None, BufferBarrierScope::IndexBuffer, result.ibuf });
 
   fast_obj_destroy(mesh);
 
@@ -178,7 +179,8 @@ suzanne()
   mvp.view = glm::identity<glm::mat4>();
   mvp.proj = glm::identity<glm::mat4>();
 
-  mvp.model = glm::scale(mvp.model, glm::vec3{ 0.7f, -0.7f, 0.1f }); // scale down, flip y
+  mvp.model =
+    glm::scale(mvp.model, glm::vec3{ 0.7f, -0.7f, 0.1f }); // scale down, flip y
   mvp.model = glm::translate(mvp.model, glm::vec3{ 0, 0, 1.f }); // move closer
 
   Buffer uniformBuffer;
@@ -218,6 +220,10 @@ suzanne()
       mesh = uploadSuzanne(device, cmdBuffer);
     }
 
+    cmdBuffer->TextureBarrier({ TextureBarrierScope::None,
+                                TextureBarrierScope::ColorAttachment,
+                                swapchainTexture });
+
     RenderPassBeginInfo beginInfo = {};
     beginInfo.attachmentCnt = 1;
     beginInfo.attachmentInfos[0].clearValue = { 0., 0., 0., 1 };
@@ -225,7 +231,8 @@ suzanne()
     beginInfo.attachmentInfos[0].type = AttachmentType::COLOR;
     beginInfo.attachmentInfos[0].loadOp = LoadOp::CLEAR;
     beginInfo.attachmentInfos[0].storeOp = StoreOp::STORE;
-    beginInfo.attachmentInfos[0].makePresentable = true;
+    beginInfo.attachmentInfos[0].makePresentable = false;
+
     cmdBuffer->BeginRenderPass(beginInfo);
 
     cmdBuffer->SetPipelineState(state);
@@ -234,6 +241,10 @@ suzanne()
     cmdBuffer->BindUniformBuffer(uniformBuffer, 0, 0);
     cmdBuffer->DrawIndexed(mesh.triCnt * 3);
     cmdBuffer->EndRenderPass();
+
+    cmdBuffer->TextureBarrier({ TextureBarrierScope::ColorAttachment,
+                                TextureBarrierScope::PresentSrc,
+                                swapchainTexture });
 
     device->Submit(cmdBuffer);
 
