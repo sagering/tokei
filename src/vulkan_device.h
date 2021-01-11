@@ -387,6 +387,9 @@ public:
   void CopyBufferToTexture(Texture dst, Buffer src);
   void EndCopyPass() override;
 
+  virtual void BufferBarrier(BufferBarrierInfo const& info) override;
+  virtual void TextureBarrier(TextureBarrierInfo const& info) override;
+
   void BeginRenderPass(RenderPassBeginInfo const& beginInfo) override;
 
   void BindVertexBuffer(Buffer vertex_buffer, uint64_t offset) override;

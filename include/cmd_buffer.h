@@ -275,11 +275,13 @@ enum class AttachmentType
   COLOR,
   DEPTH
 };
+
 enum class LoadOp
 {
   CLEAR,
   LOAD
 };
+
 enum class StoreOp
 {
   DONT_CARE,
@@ -325,6 +327,45 @@ struct RenderPassBeginInfo
   uint32_t attachmentCnt;
 };
 
+enum class TextureBarrierScope
+{
+  None,
+  ColorAttachment,
+  DepthStencilAttachment,
+  SampledTexture,
+  PresentSrc,
+  TransferSrc,
+  TransferDst
+};
+
+struct TextureBarrierInfo
+{
+  TextureBarrierScope src;
+  TextureBarrierScope dst;
+  Texture texture;
+};
+
+enum class BufferBarrierScope
+{
+  None,
+  IndexBuffer,
+  VertexBuffer,
+  IndirectBuffer,
+  UniformBuffer,
+  StorageBuffer,
+  UniformTexelBuffer,
+  StorageTexelBuffer,
+  TransferSrc,
+  TransferDst
+};
+
+struct BufferBarrierInfo
+{
+  BufferBarrierScope src;
+  BufferBarrierScope dst;
+  Buffer buffer;
+};
+
 class CmdBuffer
 {
 public:
@@ -332,6 +373,9 @@ public:
   virtual void Copy(Buffer dst, Buffer src) = 0;
   virtual void CopyBufferToTexture(Texture dst, Buffer src) = 0;
   virtual void EndCopyPass() = 0;
+
+  virtual void BufferBarrier(BufferBarrierInfo const& info) = 0;
+  virtual void TextureBarrier(TextureBarrierInfo const& info) = 0;
 
   virtual void BeginRenderPass(RenderPassBeginInfo const& beginInfo) = 0;
   virtual void BindVertexBuffer(Buffer buffer, uint64_t offset) = 0;

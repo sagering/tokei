@@ -64,6 +64,139 @@ getImageLayoutName(VkImageLayout layout)
   return "";
 };
 
+AccessScope
+getAccessScope(BufferBarrierScope scope)
+{
+  switch (scope) {
+    case BufferBarrierScope::None:
+      return {};
+      break;
+    case BufferBarrierScope::IndexBuffer:
+      return AccessScope::IndexBuffer();
+      break;
+    case BufferBarrierScope::VertexBuffer:
+      return AccessScope::VertexBuffer();
+      break;
+    case BufferBarrierScope::IndirectBuffer:
+      return AccessScope::IndirectBuffer();
+      break;
+    case BufferBarrierScope::UniformBuffer:
+      return AccessScope::UniformBuffer(VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
+                                        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+      break;
+    case BufferBarrierScope::StorageBuffer:
+      return AccessScope::StorageBuffer(VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
+                                        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+      break;
+    case BufferBarrierScope::UniformTexelBuffer:
+      return AccessScope::UniformTexelBuffer(
+        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+      break;
+    case BufferBarrierScope::StorageTexelBuffer:
+      return AccessScope::StorageTexelBuffer(
+        VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+      break;
+    case BufferBarrierScope::TransferSrc:
+      return AccessScope::BufferTransferSrc();
+      break;
+    case BufferBarrierScope::TransferDst:
+      return AccessScope::BufferTransferDst();
+      break;
+    default:
+      return {};
+      break;
+  }
+}
+
+AccessScope
+getAccessScope(TextureBarrierScope scope)
+{
+  switch (scope) {
+    case TextureBarrierScope::None:
+      return {};
+      break;
+    case TextureBarrierScope::ColorAttachment:
+      return AccessScope::ColorOutputAttachment();
+      break;
+    case TextureBarrierScope::DepthStencilAttachment:
+      return AccessScope::DepthStencilAttachment();
+      break;
+    case TextureBarrierScope::SampledTexture:
+      return AccessScope::Sampled(VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
+                                  VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+      break;
+    case TextureBarrierScope::PresentSrc:
+      return AccessScope::PresentSrc();
+      break;
+    case TextureBarrierScope::TransferSrc:
+      return AccessScope::TextureTransferSrc();
+      break;
+    case TextureBarrierScope::TransferDst:
+      return AccessScope::TextureTransferDst();
+      break;
+    default:
+      return {};
+      break;
+  }
+}
+
+void
+VulkanCmdBuffer::BufferBarrier(BufferBarrierInfo const& info)
+{
+  auto src = getAccessScope(info.src);
+  auto dst = getAccessScope(info.dst);
+  auto bufferInfo = ((VulkanDevice::BufferInfo*)info.buffer);
+
+  auto barrier = vkiBufferMemoryBarrier(src.accessFlags,
+                                        dst.accessFlags,
+                                        -1,
+                                        -1,
+                                        bufferInfo->buffer,
+                                        0,
+                                        bufferInfo->size);
+
+  vkCmdPipelineBarrier(data.cmdBuffer,
+                       src.stageFlags,
+                       dst.stageFlags,
+                       VK_DEPENDENCY_BY_REGION_BIT,
+                       0,
+                       nullptr,
+                       1,
+                       &barrier,
+                       0,
+                       nullptr);
+}
+
+void
+VulkanCmdBuffer::TextureBarrier(TextureBarrierInfo const& info)
+{
+  auto src = getAccessScope(info.src);
+  auto dst = getAccessScope(info.dst);
+  auto textureInfo = ((VulkanDevice::TextureInfo*)info.texture);
+
+  auto barrier = vkiImageMemoryBarrier(src.accessFlags,
+                                       dst.accessFlags,
+                                       src.initialLayout,
+                                       dst.initialLayout,
+                                       -1,
+                                       -1,
+                                       textureInfo->image,
+                                       textureInfo->subresource);
+
+  vkCmdPipelineBarrier(data.cmdBuffer,
+                       src.stageFlags,
+                       dst.stageFlags,
+                       VK_DEPENDENCY_BY_REGION_BIT,
+                       0,
+                       nullptr,
+                       0,
+                       nullptr,
+                       1,
+                       &barrier);
+}
+
 void
 SynchronizationInfo::Coalesce(void* res, ResourceType resType, AccessScope prev)
 {
@@ -144,9 +277,9 @@ VulkanCmdBuffer::BeginCopyPass()
   Cmd cmd = { CmdCode::BEGIN_COPY_PASS };
   data.cmds.push_back(cmd);
   data.passes.push_back({ data.passes.size() - 1,
-                           PassType::COPY,
-                           static_cast<int>(data.cmds.size() - 1),
-                           0 });
+                          PassType::COPY,
+                          static_cast<int>(data.cmds.size() - 1),
+                          0 });
 }
 
 void
@@ -185,9 +318,9 @@ VulkanCmdBuffer::BeginRenderPass(RenderPassBeginInfo const& beginInfo)
   data.cmds.push_back(cmd);
 
   data.passes.push_back({ data.passes.size() - 1,
-                           PassType::RENDER,
-                           static_cast<int>(data.cmds.size()) - 1,
-                           0 });
+                          PassType::RENDER,
+                          static_cast<int>(data.cmds.size()) - 1,
+                          0 });
 
   for (uint32_t i = 0; i < beginInfo.attachmentCnt; ++i) {
     auto const& info = beginInfo.attachmentInfos[i];
@@ -849,11 +982,8 @@ VulkanCmdBuffer::ReplayRenderPass(Pass const& pass)
             descriptorWrites[i].dstSet = set;
           }
 
-          vkUpdateDescriptorSets(data.device->device,
-                                 writeCnt,
-                                 descriptorWrites.data(),
-                                 0,
-                                 nullptr);
+          vkUpdateDescriptorSets(
+            data.device->device, writeCnt, descriptorWrites.data(), 0, nullptr);
 
           auto layout =
             GetPipelineLayout(&data.device->staticResources, &pipelineLayout);
