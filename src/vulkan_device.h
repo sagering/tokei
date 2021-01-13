@@ -271,6 +271,7 @@ public:
 
   void Release(Buffer buffer) override;
   void Release(Swapchain swapchain) override;
+  void Release(Texture texture);
 
   void Recycle() override;
 

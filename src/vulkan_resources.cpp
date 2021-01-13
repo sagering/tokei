@@ -79,7 +79,8 @@ hash(PipelineLayout const* pipelineLayout, FNVHash prev)
 FNVHash
 hash(Pipeline1 const* pipeline, FNVHash prev)
 {
-  return hash(pipeline, sizeof(*pipeline));
+  prev = hash(pipeline, sizeof(*pipeline), prev);
+  return hash(pipeline->state, sizeof(*pipeline->state), prev);
 }
 
 VkRenderPass
@@ -820,7 +821,7 @@ AllocateCommandPool(ResourceArenaAllocator* arena, uint32_t queueFamilyIdx)
   // TODO: reuse command pools: the problem is, that we cannot free all command
   // buffers allocated from a pool at once, so we also need to keep track of all
   // allocated command buffers; This is not hard, but I don't feel like doing
-  // this right now. 
+  // this right now.
 
   // auto it = arena->free.cmdPools.find(queueFamilyIdx);
   // if (it != arena->free.cmdPools.end()) {

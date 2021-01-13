@@ -3,67 +3,6 @@
 #include "vulkan_resources.h"
 #include "vulkan_types.h"
 
-#include <algorithm>
-#include <assert.h>
-
-//#define PRINT_SYNC_CMD
-
-char* const
-getImageLayoutName(VkImageLayout layout)
-{
-  if (layout == VK_IMAGE_LAYOUT_UNDEFINED)
-    return "VK_IMAGE_LAYOUT_UNDEFINED";
-  if (layout == VK_IMAGE_LAYOUT_GENERAL)
-    return "VK_IMAGE_LAYOUT_GENERAL";
-  if (layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-    return "VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL";
-  if (layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-    return "VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL";
-  if (layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL)
-    return "VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL";
-  if (layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-    return "VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL";
-  if (layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-    return "VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL";
-  if (layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-    return "VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL";
-  if (layout == VK_IMAGE_LAYOUT_PREINITIALIZED)
-    return "VK_IMAGE_LAYOUT_PREINITIALIZED";
-  if (layout == VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL)
-    return "VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL";
-  if (layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL)
-    return "VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL";
-  if (layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
-    return "VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL";
-  if (layout == VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL)
-    return "VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL";
-  if (layout == VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL)
-    return "VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL";
-  if (layout == VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL)
-    return "VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL";
-  if (layout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
-    return "VK_IMAGE_LAYOUT_PRESENT_SRC_KHR";
-  if (layout == VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR)
-    return "VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR";
-  if (layout == VK_IMAGE_LAYOUT_SHADING_RATE_OPTIMAL_NV)
-    return "VK_IMAGE_LAYOUT_SHADING_RATE_OPTIMAL_NV";
-  if (layout == VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT)
-    return "VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT";
-  if (layout == VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR)
-    return "VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR";
-  if (layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR)
-    return "VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR";
-  if (layout == VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL_KHR)
-    return "VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL_KHR";
-  if (layout == VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL_KHR)
-    return "VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL_KHR";
-  if (layout == VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL_KHR)
-    return "VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL_KHR";
-  if (layout == VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL_KHR)
-    return "VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL_KHR";
-  return "";
-};
-
 AccessScope
 getAccessScope(BufferBarrierScope scope)
 {
@@ -256,8 +195,9 @@ VulkanCmdBuffer::BeginRenderPass(RenderPassBeginInfo const& beginInfo)
                                : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
         // attachment refs for subpass 0
-        rp.attachmentRefs[0].colorAttachments[rp.attachmentCnt] = {
-          0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        rp.attachmentRefs[0]
+          .colorAttachments[rp.attachmentRefs[0].colorAttachmentCnt] = {
+          rp.attachmentCnt, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
         };
         ++rp.attachmentRefs[0].colorAttachmentCnt;
 
@@ -283,7 +223,44 @@ VulkanCmdBuffer::BeginRenderPass(RenderPassBeginInfo const& beginInfo)
         break;
       }
       case AttachmentType::DEPTH: {
-        // TODO: implementation
+        // TODO: depth stencil attachmentss and depth only attachments need
+        // different layouts
+        rp.attachments[rp.attachmentCnt] =
+          vkiAttachmentDescription(GetVkFormat(textureInfo->desc.format),
+                                   VK_SAMPLE_COUNT_1_BIT,
+                                   VK_ATTACHMENT_LOAD_OP_CLEAR,
+                                   VK_ATTACHMENT_STORE_OP_STORE,
+                                   GetVkAttachmentLoadOp(info.loadOp),
+                                   GetVkAttachmentStoreOp(info.storeOp),
+                                   VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                                   VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
+        // attachment refs for subpass 0
+        rp.attachmentRefs[0].depthStencilAttachments
+          [rp.attachmentRefs[0].depthStencilAttachmentCnt] = {
+          rp.attachmentCnt, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+        };
+        ++rp.attachmentRefs[0].depthStencilAttachmentCnt;
+
+        rp.subpassess[0].pDepthStencilAttachment =
+          rp.attachmentRefs[0].depthStencilAttachments;
+
+        // we use the color clear value here, but since it's a union, the depth
+        // clear value will be set properly
+        clearValues[rp.attachmentCnt] = { info.clearValue.color.float32[0],
+                                          info.clearValue.color.float32[1],
+                                          info.clearValue.color.float32[2],
+                                          info.clearValue.color.float32[3] };
+
+        ++rp.attachmentCnt;
+
+        // framebuffer
+        fb.width = textureInfo->desc.width;
+        fb.height = textureInfo->desc.height;
+        fb.layers = textureInfo->desc.layers;
+        fb.attachments[fb.attachmentCnt] = textureInfo->view;
+        ++fb.attachmentCnt;
+
         break;
       }
       default:

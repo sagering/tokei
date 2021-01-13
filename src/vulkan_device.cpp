@@ -400,6 +400,15 @@ VulkanDevice::Release(Buffer buffer)
 }
 
 void
+VulkanDevice::Release(Texture texture)
+{
+  auto i = (trash.start + trash.cnt) % Trash::RING_BUFFER_SIZE;
+  trash.resources[i].resource = texture;
+  trash.resources[i].type = ResourceType::TEXTURE;
+  ++trash.cnt;
+}
+
+void
 VulkanDevice::Release(Swapchain swapchain)
 {
   auto i = (trash.start + trash.cnt) % Trash::RING_BUFFER_SIZE;
@@ -453,6 +462,24 @@ VulkanDevice::Recycle()
           break;
         }
         case ResourceType::TEXTURE: {
+          auto textureInfo = (TextureInfo*)res.resource;
+          vkDestroyImage(device, textureInfo->image, nullptr);
+          vkDestroyImageView(device, textureInfo->view, nullptr);
+
+          if (textureInfo->event) {
+            ReleaseEvent(&allocator, textureInfo->event);
+          }
+
+          vmaFreeMemory(vmaAllocator, textureInfo->allocation);
+
+          for (auto it = textures.begin(); it != textures.end(); ++it) {
+            if (*it == textureInfo) {
+				textures.erase(it);
+              break;
+            }
+          }
+
+          delete textureInfo;
           break;
         }
         case ResourceType::SWAPCHAIN: {
