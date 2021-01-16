@@ -43,6 +43,7 @@ enum class MemoryUsage : uint8_t
 typedef struct Buffer_T* Buffer;
 typedef struct Texture_T* Texture;
 typedef struct Swapchain_T* Swapchain;
+typedef struct Ticket_T* Ticket;
 
 // Pixel components are abreviated using the following letters:
 //
@@ -138,7 +139,8 @@ public:
   static Device* Create();
 
   virtual CmdBuffer* GetCmdBuffer() = 0;
-  virtual void Submit(CmdBuffer* cmdBuffer) = 0;
+  virtual Ticket Submit(CmdBuffer* cmdBuffer) = 0;
+  virtual void Wait(Ticket ticket) = 0;
 
   virtual std::pair<Buffer, void*> CreateBuffer(
     BufferCreateInfo const& createInfo) = 0;

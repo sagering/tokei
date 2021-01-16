@@ -1,0 +1,36 @@
+#version 450
+
+layout (local_size_x_id = 0) in;
+
+struct Particle
+{
+	vec4 pos;
+	vec4 vel;
+};
+
+layout(std140, set = 0, binding = 0) buffer SBO 
+{
+   Particle particles[ ];
+};
+
+layout (set = 0, binding = 1) uniform UBO 
+{
+	float dt;
+	uint particleCnt;
+} ubo;
+
+void main() 
+{
+	uint index = uint(gl_GlobalInvocationID);
+	vec4 position = particles[index].pos;
+	vec4 velocity = particles[index].vel;
+	position += ubo.dt * velocity;
+	
+	if(position.x > 1 || position.x < -1 || position.y > 1 || position.y < -1) {
+		velocity = -velocity;
+	}
+	
+	particles[index].pos = position;
+	particles[index].vel = velocity;
+
+}

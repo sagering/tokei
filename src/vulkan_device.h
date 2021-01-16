@@ -213,7 +213,12 @@ public:
   VulkanCmdBuffer(VulkanDevice* device_, VkCommandBuffer cmdBuffer_)
     : device(device_)
     , cmdBuffer(cmdBuffer_)
-  {}
+  {
+    cmdBufferState.bufferInfos.reserve(8);
+    cmdBufferState.imageInfos.reserve(8);
+    cmdBufferState.descriptorWrites.reserve(8);
+    cmdBufferState.descriptorSets.reserve(8);
+  }
 
   void Copy(Buffer dst, Buffer src) override;
   void CopyBufferToTexture(Texture dst, Buffer src) override;
@@ -229,6 +234,9 @@ public:
   void BindUniformBuffer(Buffer buffer,
                          uint32_t set,
                          uint32_t binding) override;
+  void BindStorageBuffer(Buffer buffer,
+                         uint32_t set,
+                         uint32_t binding) override;
   void BindSampler(uint32_t set, uint32_t binding) override;
   void BindSampledTexture(Texture texture,
                           uint32_t set,
@@ -237,6 +245,7 @@ public:
   void SetPipelineState(PipelineState pipelineState) override;
   void Draw(uint32_t cnt) override;
   void DrawIndexed(uint32_t cnt) override;
+  void Dispatch(uint32_t x, uint32_t y, uint32_t z) override;
 
   void EndRenderPass() override;
 
@@ -276,7 +285,8 @@ public:
   void Recycle() override;
 
   CmdBuffer* GetCmdBuffer() override;
-  void Submit(CmdBuffer* cmdBuffer) override;
+  Ticket Submit(CmdBuffer* cmdBuffer) override;
+  void Wait(Ticket ticket) override;
 
   VulkanDevice();
   ~VulkanDevice();
@@ -376,6 +386,14 @@ private:
   ResourceArenaAllocator arena;
   ResourceAllocator allocator;
   VkCommandPool cmdPool = VK_NULL_HANDLE;
+
+  uint64_t ticketCounter = 0;
+  struct TicketFence
+  {
+    uint64_t ticket;
+    VkFence fence;
+  };
+  std::queue<TicketFence> ticketFences;
 
   std::vector<BufferInfo*> buffers = {};
   std::vector<TextureInfo*> textures = {};

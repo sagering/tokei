@@ -17,18 +17,22 @@ getAccessScope(BufferBarrierScope scope)
       return AccessScope::IndirectBuffer();
     case BufferBarrierScope::UniformBuffer:
       return AccessScope::UniformBuffer(VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
-                                        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+                                        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
     case BufferBarrierScope::StorageBuffer:
       return AccessScope::StorageBuffer(VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
-                                        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+                                        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+                                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
     case BufferBarrierScope::UniformTexelBuffer:
       return AccessScope::UniformTexelBuffer(
         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
     case BufferBarrierScope::StorageTexelBuffer:
       return AccessScope::StorageTexelBuffer(
         VK_PIPELINE_STAGE_VERTEX_SHADER_BIT |
-        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT |
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
     case BufferBarrierScope::TransferSrc:
       return AccessScope::BufferTransferSrc();
     case BufferBarrierScope::TransferDst:
@@ -166,6 +170,8 @@ VulkanCmdBuffer::BeginRenderPass(RenderPassBeginInfo const& beginInfo)
 
   cmdBufferState.bufferInfos.reserve(8);
   cmdBufferState.imageInfos.reserve(8);
+  cmdBufferState.descriptorWrites.reserve(8);
+  cmdBufferState.descriptorSets.reserve(8);
 
   RenderPass rp = {};
   rp.subpassCnt = 1;
@@ -225,15 +231,15 @@ VulkanCmdBuffer::BeginRenderPass(RenderPassBeginInfo const& beginInfo)
       case AttachmentType::DEPTH: {
         // TODO: depth stencil attachmentss and depth only attachments need
         // different layouts
-        rp.attachments[rp.attachmentCnt] =
-          vkiAttachmentDescription(GetVkFormat(textureInfo->desc.format),
-                                   VK_SAMPLE_COUNT_1_BIT,
-                                   VK_ATTACHMENT_LOAD_OP_CLEAR,
-                                   VK_ATTACHMENT_STORE_OP_STORE,
-                                   GetVkAttachmentLoadOp(info.loadOp),
-                                   GetVkAttachmentStoreOp(info.storeOp),
-                                   VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                                   VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+        rp.attachments[rp.attachmentCnt] = vkiAttachmentDescription(
+          GetVkFormat(textureInfo->desc.format),
+          VK_SAMPLE_COUNT_1_BIT,
+          VK_ATTACHMENT_LOAD_OP_CLEAR,
+          VK_ATTACHMENT_STORE_OP_STORE,
+          GetVkAttachmentLoadOp(info.loadOp),
+          GetVkAttachmentStoreOp(info.storeOp),
+          VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+          VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
         // attachment refs for subpass 0
         rp.attachmentRefs[0].depthStencilAttachments
@@ -322,6 +328,27 @@ VulkanCmdBuffer::BindUniformBuffer(Buffer buffer,
 }
 
 void
+VulkanCmdBuffer::BindStorageBuffer(Buffer buffer,
+                                   uint32_t set,
+                                   uint32_t binding)
+{
+  auto bufferInfo = (VulkanDevice::BufferInfo*)buffer;
+
+  cmdBufferState.descriptorSets.push_back(set);
+  cmdBufferState.bufferInfos.push_back(
+    vkiDescriptorBufferInfo(bufferInfo->buffer, 0, bufferInfo->size));
+  cmdBufferState.descriptorWrites.push_back(
+    vkiWriteDescriptorSet(VK_NULL_HANDLE,
+                          binding,
+                          0,
+                          1,
+                          VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+                          nullptr,
+                          &cmdBufferState.bufferInfos.back(),
+                          nullptr));
+}
+
+void
 VulkanCmdBuffer::BindSampler(uint32_t set, uint32_t binding)
 {
   auto sampler = GetSampler(&device->staticResources);
@@ -369,7 +396,11 @@ VulkanCmdBuffer::SetPipelineState(PipelineState pipelineState)
   auto pipeline = GetPipeline(
     &device->staticResources, &pipe, &cmdBufferState.pipelineLayout);
 
-  vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+  if (pipelineState.shader.computeShader) {
+    vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
+  } else {
+    vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+  }
 }
 
 void
@@ -454,4 +485,43 @@ void
 VulkanCmdBuffer::EndRenderPass()
 {
   vkCmdEndRenderPass(cmdBuffer);
+}
+
+void
+VulkanCmdBuffer::Dispatch(uint32_t x, uint32_t y, uint32_t z)
+{
+  uint32_t const writeCnt =
+    static_cast<uint32_t>(cmdBufferState.descriptorSets.size());
+
+  if (writeCnt > 0) {
+    auto set = AllocateDescriptorSet(&device->arena,
+                                     &cmdBufferState.pipelineLayout.layouts[0]);
+
+    for (uint32_t i = 0; i < writeCnt; ++i) {
+      cmdBufferState.descriptorWrites[i].dstSet = set;
+    }
+
+    vkUpdateDescriptorSets(device->device,
+                           writeCnt,
+                           cmdBufferState.descriptorWrites.data(),
+                           0,
+                           nullptr);
+
+    auto layout = GetPipelineLayout(&device->staticResources,
+                                    &cmdBufferState.pipelineLayout);
+    vkCmdBindDescriptorSets(cmdBuffer,
+                            VK_PIPELINE_BIND_POINT_COMPUTE,
+                            layout,
+                            0,
+                            1,
+                            &set,
+                            0,
+                            nullptr);
+
+    cmdBufferState.descriptorSets.clear();
+    cmdBufferState.bufferInfos.clear();
+    cmdBufferState.imageInfos.clear();
+  }
+
+  vkCmdDispatch(cmdBuffer, x, y, z);
 }

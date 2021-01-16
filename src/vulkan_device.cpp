@@ -424,6 +424,12 @@ VulkanDevice::Recycle()
     cmdPool = VK_NULL_HANDLE;
   }
 
+  while (!ticketFences.empty() &&
+         vkGetFenceStatus(device, ticketFences.front().fence) == VK_SUCCESS) {
+    ReleaseFence(&allocator, ticketFences.front().fence);
+    ticketFences.pop();
+  }
+
   // TODO: we are doing three separate queue submission for each kind of
   // allocator; these should be grouped into one submission
   ClaimResources(&allocator);
@@ -474,7 +480,7 @@ VulkanDevice::Recycle()
 
           for (auto it = textures.begin(); it != textures.end(); ++it) {
             if (*it == textureInfo) {
-				textures.erase(it);
+              textures.erase(it);
               break;
             }
           }
@@ -540,7 +546,7 @@ VulkanDevice::GetCmdBuffer()
   return AllocateCmdBuffer();
 }
 
-void
+Ticket
 VulkanDevice::Submit(CmdBuffer* cmdBuffer_)
 {
   VulkanCmdBuffer* cmdBuffer = (VulkanCmdBuffer*)cmdBuffer_;
@@ -551,6 +557,8 @@ VulkanDevice::Submit(CmdBuffer* cmdBuffer_)
 
   vkEndCommandBuffer(cmdBuffer->cmdBuffer);
 
+  auto fence = AllocateFence(&allocator);
+
   auto submitInfo =
     vkiSubmitInfo(static_cast<uint32_t>(waitSemaphores.size()),
                   waitSemaphores.data(),
@@ -560,8 +568,24 @@ VulkanDevice::Submit(CmdBuffer* cmdBuffer_)
                   static_cast<uint32_t>(signalSemaphores.size()),
                   signalSemaphores.data());
 
-  vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
+  vkQueueSubmit(queue, 1, &submitInfo, fence);
   delete cmdBuffer;
+
+  ticketFences.push({ ticketCounter, fence });
+
+  return (Ticket)ticketCounter++;
+}
+
+void
+VulkanDevice::Wait(Ticket ticket_)
+{
+  uint64_t ticket = (uint64_t)ticket_;
+
+  while (!ticketFences.empty() && ticketFences.front().ticket <= ticket) {
+    vkWaitForFences(device, 1, &ticketFences.front().fence, VK_TRUE, -1);
+    ReleaseFence(&allocator, ticketFences.front().fence);
+    ticketFences.pop();
+  }
 }
 
 VulkanDevice::VulkanDevice()

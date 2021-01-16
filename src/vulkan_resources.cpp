@@ -490,10 +490,44 @@ GetPipeline(StaticResources* res, Pipeline1* pipeline_, PipelineLayout* layout_)
     return it->second.pipeline;
   }
 
+  bool isCompute = pipeline_->state->shader.computeShader != nullptr;
+
   // shader
   VkPipelineShaderStageCreateInfo shaderStageCreateInfos[2];
   uint32_t shaderStageCnt = 0;
   ShaderLayout1 shaderLayouts[2];
+
+  if (isCompute) {
+    shaderStageCreateInfos[shaderStageCnt] = vkiPipelineShaderStageCreateInfo(
+      VK_SHADER_STAGE_COMPUTE_BIT,
+      GetShaderModule(res, pipeline_->state->shader.computeShader),
+      "main",
+      nullptr);
+    shaderLayouts[shaderStageCnt] =
+      GetShaderLayout(res, pipeline_->state->shader.computeShader);
+
+    for (uint32_t bindingIdx = 0;
+         bindingIdx < shaderLayouts[shaderStageCnt].bindingCnt;
+         ++bindingIdx) {
+      shaderLayouts[shaderStageCnt].bindings[bindingIdx].binding.stageFlags =
+        VK_SHADER_STAGE_COMPUTE_BIT;
+    }
+
+    ++shaderStageCnt;
+
+    MergeShaderLayouts(shaderLayouts, shaderStageCnt, layout_);
+
+    auto layout = GetPipelineLayout(res, layout_);
+    auto createInfo = vkiComputePipelineCreateInfo(
+      *shaderStageCreateInfos, layout, VK_NULL_HANDLE, 0);
+    VkPipeline pipeline = VK_NULL_HANDLE;
+    vkCreateComputePipelines(
+      res->device, VK_NULL_HANDLE, 1, &createInfo, nullptr, &pipeline);
+
+    res->pipelines.insert({ h, { pipeline, *layout_ } });
+
+    return pipeline;
+  }
 
   if (pipeline_->state->shader.vertexShader) {
     shaderStageCreateInfos[shaderStageCnt] = vkiPipelineShaderStageCreateInfo(

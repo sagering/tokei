@@ -231,6 +231,7 @@ struct PipelineState
   {
     char const* vertexShader;
     char const* fragmentShader;
+    char const* computeShader;
   } shader;
 
   struct VertexInputState
@@ -382,12 +383,16 @@ public:
   virtual void BindUniformBuffer(Buffer buffer,
                                  uint32_t set,
                                  uint32_t binding) = 0;
+  virtual void BindStorageBuffer(Buffer buffer,
+                                 uint32_t set,
+                                 uint32_t binding) = 0;
   virtual void BindSampler(uint32_t set, uint32_t binding) = 0;
   virtual void BindSampledTexture(Texture texture,
                                   uint32_t set,
                                   uint32_t binding) = 0;
   virtual void Draw(uint32_t cnt) = 0;
   virtual void DrawIndexed(uint32_t cnt) = 0;
+  virtual void Dispatch(uint32_t x, uint32_t y, uint32_t z) = 0;
   virtual void EndRenderPass() = 0;
 };
 
