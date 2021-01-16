@@ -195,12 +195,12 @@ main()
   bufferCreateInfo.memoryUsage = MemoryUsage::CPU_TO_GPU;
   std::tie(uniformBuffer, data) = device->CreateBuffer(bufferCreateInfo);
 
-  ubo.cameraPos = { 0.f, -12.f, 13.f };
+  ubo.cameraPos = { 0.f, -18.f, 13.f };
   ubo.model = glm::scale(glm::identity<glm::mat4>(), { 1.f, -1.f, 1.f });
   ubo.view =
     glm::lookAt(ubo.cameraPos, glm::vec3{}, glm::vec3{ 0.f, 1.f, 0.f });
   ubo.proj =
-    glm::perspective(80.f / 180.f * glm::pi<float>(), 1.f, 0.1f, 1000.f);
+    glm::perspective(50.f / 180.f * glm::pi<float>(), 1.f, 0.1f, 1000.f);
 
   while (true) {
     Texture swapchainTexture;
