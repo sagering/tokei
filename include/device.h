@@ -105,6 +105,7 @@ struct TextureCreateInfo
   uint32_t depth;
   uint32_t mipLevels;
   uint32_t layers;
+  uint32_t samples = 1;
   PixelFormat format;
   TextureUsageFlags usageFlags;
   char const* name = nullptr;

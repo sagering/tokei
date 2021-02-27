@@ -256,6 +256,7 @@ private:
   struct CmdBufferState
   {
     VkRenderPass renderPass = VK_NULL_HANDLE;
+    uint32_t subpass = 0;
     std::vector<VkWriteDescriptorSet> descriptorWrites = {};
     std::vector<uint32_t> descriptorSets = {};
     std::vector<VkDescriptorBufferInfo> bufferInfos = {};

@@ -269,12 +269,18 @@ struct PipelineState
     Viewport viewport;
     Rect scissors;
   } viewport;
+
+  struct MultisampleState
+  {
+    uint32_t rasterizationSamples = 1;
+  } multisample;
 };
 
 enum class AttachmentType
 {
   COLOR,
-  DEPTH
+  DEPTH,
+  RESOLVE
 };
 
 enum class LoadOp

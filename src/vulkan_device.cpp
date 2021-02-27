@@ -115,6 +115,8 @@ VulkanDevice::CreateTexture(TextureCreateInfo const& desc)
   VkImageType imageType = VK_IMAGE_TYPE_2D;
   VkImageViewType imageViewType = VK_IMAGE_VIEW_TYPE_2D;
 
+  VkSampleCountFlagBits samples = GetVkSampleCountFlagBits(desc.samples);
+
   // TODO: replace wonky this derivation of image type
   if (desc.height == 1 && desc.depth == 1) {
     imageType = VK_IMAGE_TYPE_1D;
@@ -157,7 +159,7 @@ VulkanDevice::CreateTexture(TextureCreateInfo const& desc)
                                             extent,
                                             desc.mipLevels,
                                             desc.layers,
-                                            VK_SAMPLE_COUNT_1_BIT,
+                                            samples,
                                             VK_IMAGE_TILING_OPTIMAL,
                                             usage,
                                             VK_SHARING_MODE_EXCLUSIVE,

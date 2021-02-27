@@ -649,7 +649,13 @@ GetPipeline(StaticResources* res, Pipeline1* pipeline_, PipelineLayout* layout_)
   // multisample
 
   auto multisamleState = vkiPipelineMultisampleStateCreateInfo(
-    VK_SAMPLE_COUNT_1_BIT, false, 1.0, nullptr, false, false);
+    GetVkSampleCountFlagBits(
+      pipeline_->state->multisample.rasterizationSamples),
+    false,
+    1.0,
+    nullptr,
+    false,
+    false);
 
   // depth stencil
 

@@ -116,6 +116,8 @@ main()
   glfwInit();
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 
+  uint32_t samples = 16;
+
   int width = 512;
   int height = 512;
 
@@ -123,6 +125,19 @@ main()
   auto hwnd = glfwGetWin32Window(window);
 
   auto device = Device::Create();
+
+  TextureCreateInfo textureCreateInfo = {};
+  textureCreateInfo.width = width;
+  textureCreateInfo.height = height;
+  textureCreateInfo.depth = 1;
+  textureCreateInfo.format = PixelFormat::RGBA8_UNORM_SRGB;
+  textureCreateInfo.layers = 1;
+  textureCreateInfo.mipLevels = 1;
+  textureCreateInfo.name = "multisample_texture";
+  textureCreateInfo.usageFlags = TextureUsageFlagBits::TEX_COLOR_ATTACHMENT;
+  textureCreateInfo.samples = samples;
+
+  auto multiSampleTexture = device->CreateTexture(textureCreateInfo);
 
   SwapchainCreateInfo swapchainCreateInfo = {};
   swapchainCreateInfo.width = width;
@@ -169,6 +184,8 @@ main()
   state.viewport.scissors.y = 0;
   state.viewport.scissors.width = swapchainCreateInfo.width;
   state.viewport.scissors.height = swapchainCreateInfo.height;
+
+  state.multisample.rasterizationSamples = samples;
 
   Mesh mesh = {};
   MVP mvp = {};
@@ -220,16 +237,26 @@ main()
 
     cmdBuffer->TextureBarrier({ TextureBarrierScope::None,
                                 TextureBarrierScope::ColorAttachment,
+                                multiSampleTexture });
+    cmdBuffer->TextureBarrier({ TextureBarrierScope::None,
+                                TextureBarrierScope::ColorAttachment,
                                 swapchainTexture });
 
     RenderPassBeginInfo beginInfo = {};
-    beginInfo.attachmentCnt = 1;
+    beginInfo.attachmentCnt = 2;
     beginInfo.attachmentInfos[0].clearValue = { 0., 0., 0., 1 };
-    beginInfo.attachmentInfos[0].texture = swapchainTexture;
+    beginInfo.attachmentInfos[0].texture = multiSampleTexture;
     beginInfo.attachmentInfos[0].type = AttachmentType::COLOR;
     beginInfo.attachmentInfos[0].loadOp = LoadOp::CLEAR;
     beginInfo.attachmentInfos[0].storeOp = StoreOp::STORE;
     beginInfo.attachmentInfos[0].makePresentable = false;
+
+    beginInfo.attachmentInfos[1].clearValue = { 0., 0., 0., 1 };
+    beginInfo.attachmentInfos[1].texture = swapchainTexture;
+    beginInfo.attachmentInfos[1].type = AttachmentType::RESOLVE;
+    beginInfo.attachmentInfos[1].loadOp = LoadOp::CLEAR;
+    beginInfo.attachmentInfos[1].storeOp = StoreOp::STORE;
+    beginInfo.attachmentInfos[1].makePresentable = false;
 
     cmdBuffer->BeginRenderPass(beginInfo);
 

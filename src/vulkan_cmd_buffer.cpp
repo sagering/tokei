@@ -191,7 +191,7 @@ VulkanCmdBuffer::BeginRenderPass(RenderPassBeginInfo const& beginInfo)
         // attachments
         rp.attachments[rp.attachmentCnt] = vkiAttachmentDescription(
           GetVkFormat(textureInfo->desc.format),
-          VK_SAMPLE_COUNT_1_BIT,
+          GetVkSampleCountFlagBits(textureInfo->desc.samples),
           GetVkAttachmentLoadOp(info.loadOp),
           GetVkAttachmentStoreOp(info.storeOp),
           VK_ATTACHMENT_LOAD_OP_CLEAR,
@@ -233,7 +233,7 @@ VulkanCmdBuffer::BeginRenderPass(RenderPassBeginInfo const& beginInfo)
         // different layouts
         rp.attachments[rp.attachmentCnt] = vkiAttachmentDescription(
           GetVkFormat(textureInfo->desc.format),
-          VK_SAMPLE_COUNT_1_BIT,
+          GetVkSampleCountFlagBits(textureInfo->desc.samples),
           VK_ATTACHMENT_LOAD_OP_CLEAR,
           VK_ATTACHMENT_STORE_OP_STORE,
           GetVkAttachmentLoadOp(info.loadOp),
@@ -269,12 +269,52 @@ VulkanCmdBuffer::BeginRenderPass(RenderPassBeginInfo const& beginInfo)
 
         break;
       }
+      case AttachmentType::RESOLVE: {
+        // COLOR resolve attachment
+        rp.attachments[rp.attachmentCnt] = vkiAttachmentDescription(
+          GetVkFormat(textureInfo->desc.format),
+          GetVkSampleCountFlagBits(textureInfo->desc.samples),
+          GetVkAttachmentLoadOp(info.loadOp),
+          GetVkAttachmentStoreOp(info.storeOp),
+          VK_ATTACHMENT_LOAD_OP_CLEAR,
+          VK_ATTACHMENT_STORE_OP_STORE,
+          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+          info.makePresentable ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+                               : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+        // attachment refs for subpass 0
+        rp.attachmentRefs[0]
+          .resolveAttachments[rp.attachmentRefs[0].resolveAttachmentCnt] = {
+          rp.attachmentCnt, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        };
+        ++rp.attachmentRefs[0].resolveAttachmentCnt;
+
+        rp.subpassess[0].pResolveAttachments =
+          rp.attachmentRefs->resolveAttachments;
+
+        clearValues[rp.attachmentCnt] = { info.clearValue.color.float32[0],
+                                          info.clearValue.color.float32[1],
+                                          info.clearValue.color.float32[2],
+                                          info.clearValue.color.float32[3] };
+
+        ++rp.attachmentCnt;
+
+        // framebuffer
+        fb.width = textureInfo->desc.width;
+        fb.height = textureInfo->desc.height;
+        fb.layers = textureInfo->desc.layers;
+        fb.attachments[fb.attachmentCnt] = textureInfo->view;
+        ++fb.attachmentCnt;
+
+        break;
+      }
       default:
         break;
     }
   }
 
   cmdBufferState.renderPass = GetRenderPass(&device->staticResources, &rp);
+  cmdBufferState.subpass = 0;
 
   fb.renderPass = cmdBufferState.renderPass;
   auto framebuffer = GetFramebuffer(&device->staticResources, &fb);
@@ -392,7 +432,9 @@ VulkanCmdBuffer::BindSampledTexture(Texture texture,
 void
 VulkanCmdBuffer::SetPipelineState(PipelineState pipelineState)
 {
-  Pipeline1 pipe = { cmdBufferState.renderPass, 0, &pipelineState };
+  Pipeline1 pipe = { cmdBufferState.renderPass,
+                     cmdBufferState.subpass,
+                     &pipelineState };
   auto pipeline = GetPipeline(
     &device->staticResources, &pipe, &cmdBufferState.pipelineLayout);
 

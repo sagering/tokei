@@ -52,6 +52,7 @@ struct RenderPass
     MAX_NUM_SUBPASS_DEPENDENCIES = 16,
     MAX_NUM_SUBPASS_INPUT_ATTACHMENTS = 2,
     MAX_NUM_SUBPASS_COLOR_ATTACHMENTS = 2,
+    MAX_NUM_SUBPASS_RESOLVE_ATTACHMENTS = 2,
     MAX_NUM_SUBPASS_DEPTH_STENCIL_ATTACHMENTS = 1,
   };
 
@@ -67,6 +68,9 @@ struct RenderPass
     uint32_t inputAttachmentCnt;
     VkAttachmentReference colorAttachments[MAX_NUM_SUBPASS_COLOR_ATTACHMENTS];
     uint32_t colorAttachmentCnt;
+    VkAttachmentReference
+      resolveAttachments[MAX_NUM_SUBPASS_RESOLVE_ATTACHMENTS];
+    uint32_t resolveAttachmentCnt;
     VkAttachmentReference
       depthStencilAttachments[MAX_NUM_SUBPASS_DEPTH_STENCIL_ATTACHMENTS];
     uint32_t depthStencilAttachmentCnt;
