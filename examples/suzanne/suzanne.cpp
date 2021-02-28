@@ -182,7 +182,7 @@ main()
   state.viewport.viewport.maxDepth = 1.f;
   state.viewport.scissors.x = 0;
   state.viewport.scissors.y = 0;
-  state.viewport.scissors.width = swapchainCreateInfo.width;
+  state.viewport.scissors.width = swapchainCreateInfo.width / 2;
   state.viewport.scissors.height = swapchainCreateInfo.height;
 
   state.multisample.rasterizationSamples = samples;
@@ -210,7 +210,8 @@ main()
   while (true) {
     Texture swapchainTexture;
 
-    mvp.model = glm::rotate(mvp.model, 0.02f, glm::vec3{ 0, 1, 0 });
+    // mvp.model = glm::rotate(mvp.model, 0.02f, glm::vec3{ 0, 1, 0 });
+
     memcpy(data, &mvp, sizeof(mvp));
 
     if (!device->AquireNext(swapchain, &swapchainTexture)) {
@@ -244,27 +245,56 @@ main()
 
     RenderPassBeginInfo beginInfo = {};
     beginInfo.attachmentCnt = 2;
+
     beginInfo.attachmentInfos[0].clearValue = { 0., 0., 0., 1 };
-    beginInfo.attachmentInfos[0].texture = multiSampleTexture;
-    beginInfo.attachmentInfos[0].type = AttachmentType::COLOR;
+    beginInfo.attachmentInfos[0].texture = swapchainTexture;
+    beginInfo.attachmentInfos[0].type = AttachmentType::RESOLVE;
     beginInfo.attachmentInfos[0].loadOp = LoadOp::CLEAR;
     beginInfo.attachmentInfos[0].storeOp = StoreOp::STORE;
     beginInfo.attachmentInfos[0].makePresentable = false;
 
     beginInfo.attachmentInfos[1].clearValue = { 0., 0., 0., 1 };
-    beginInfo.attachmentInfos[1].texture = swapchainTexture;
-    beginInfo.attachmentInfos[1].type = AttachmentType::RESOLVE;
+    beginInfo.attachmentInfos[1].texture = multiSampleTexture;
+    beginInfo.attachmentInfos[1].type = AttachmentType::COLOR;
     beginInfo.attachmentInfos[1].loadOp = LoadOp::CLEAR;
     beginInfo.attachmentInfos[1].storeOp = StoreOp::STORE;
     beginInfo.attachmentInfos[1].makePresentable = false;
 
     cmdBuffer->BeginRenderPass(beginInfo);
 
-    cmdBuffer->SetPipelineState(state);
     cmdBuffer->BindVertexBuffer(mesh.vbuf, 0);
     cmdBuffer->BindIndexBuffer(mesh.ibuf);
     cmdBuffer->BindUniformBuffer(uniformBuffer, 0, 0);
+
+    state.viewport.scissors.x = 0;
+	state.multisample.rasterizationSamples = samples;
+    cmdBuffer->SetPipelineState(state);
     cmdBuffer->DrawIndexed(mesh.triCnt * 3);
+
+    cmdBuffer->EndRenderPass();
+
+    cmdBuffer->TextureBarrier(
+      { TextureBarrierScope::ColorAttachment, // not sure what the resolve
+                                              // attachment synchronization
+                                              // scope should be
+        TextureBarrierScope::ColorAttachment,
+        swapchainTexture });
+
+    beginInfo.attachmentCnt = 1;
+    beginInfo.attachmentInfos[0].type = AttachmentType::COLOR;
+    beginInfo.attachmentInfos[0].loadOp = LoadOp::LOAD;
+    beginInfo.attachmentInfos[0].storeOp = StoreOp::STORE;
+    cmdBuffer->BeginRenderPass(beginInfo);
+
+    cmdBuffer->BindVertexBuffer(mesh.vbuf, 0);
+    cmdBuffer->BindIndexBuffer(mesh.ibuf);
+    cmdBuffer->BindUniformBuffer(uniformBuffer, 0, 0);
+
+    state.viewport.scissors.x = width / 2;
+	state.multisample.rasterizationSamples = 1;
+    cmdBuffer->SetPipelineState(state);
+    cmdBuffer->DrawIndexed(mesh.triCnt * 3);
+
     cmdBuffer->EndRenderPass();
 
     cmdBuffer->TextureBarrier({ TextureBarrierScope::ColorAttachment,
