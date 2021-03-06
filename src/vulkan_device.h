@@ -213,12 +213,7 @@ public:
   VulkanCmdBuffer(VulkanDevice* device_, VkCommandBuffer cmdBuffer_)
     : device(device_)
     , cmdBuffer(cmdBuffer_)
-  {
-    cmdBufferState.bufferInfos.reserve(8);
-    cmdBufferState.imageInfos.reserve(8);
-    cmdBufferState.descriptorWrites.reserve(8);
-    cmdBufferState.descriptorSets.reserve(8);
-  }
+  {}
 
   void Copy(Buffer dst, Buffer src) override;
   void CopyBufferToTexture(Texture dst, Buffer src) override;
@@ -233,10 +228,14 @@ public:
 
   void BindUniformBuffer(Buffer buffer,
                          uint32_t set,
-                         uint32_t binding) override;
+                         uint32_t binding,
+                         uint32_t offset,
+                         uint32_t range) override;
   void BindStorageBuffer(Buffer buffer,
                          uint32_t set,
-                         uint32_t binding) override;
+                         uint32_t binding,
+                         uint32_t offset,
+                         uint32_t range) override;
   void BindSampler(uint32_t set, uint32_t binding) override;
   void BindSampledTexture(Texture texture,
                           uint32_t set,
@@ -253,15 +252,29 @@ private:
   VulkanDevice* device = nullptr;
   VkCommandBuffer cmdBuffer = VK_NULL_HANDLE;
 
+  struct Descriptor
+  {
+    VkDescriptorBufferInfo bufferInfo;
+    uint32_t dynamicOffset;
+    VkDescriptorImageInfo imageInfo;
+  };
+
+  struct Set
+  {
+    Descriptor bindings[8];
+    VkDescriptorSet set;
+    bool dirty;
+    bool dynamicOffsetsDirty;
+  };
+
+  void flushDescriptorSets(VkPipelineBindPoint bindPoint);
+
   struct CmdBufferState
   {
     VkRenderPass renderPass = VK_NULL_HANDLE;
     uint32_t subpass = 0;
-    std::vector<VkWriteDescriptorSet> descriptorWrites = {};
-    std::vector<uint32_t> descriptorSets = {};
-    std::vector<VkDescriptorBufferInfo> bufferInfos = {};
-    std::vector<VkDescriptorImageInfo> imageInfos = {};
     PipelineLayout pipelineLayout = {};
+    Set sets[8];
   } cmdBufferState;
 };
 

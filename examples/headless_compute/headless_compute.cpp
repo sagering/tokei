@@ -122,8 +122,8 @@ main()
     CmdBuffer* cmdBuffer = device->GetCmdBuffer();
 
     cmdBuffer->SetPipelineState(state);
-    cmdBuffer->BindStorageBuffer(storageBuffer, 0, 0);
-    cmdBuffer->BindUniformBuffer(uniformBuffer, 0, 1);
+    cmdBuffer->BindStorageBuffer(storageBuffer, 0, 0, 0, sizeof(Particle) * particleCnt);
+    cmdBuffer->BindUniformBuffer(uniformBuffer, 0, 1, 0, sizeof(UBO));
     cmdBuffer->Dispatch(particleCnt, 1, 1);
     cmdBuffer->BufferBarrier({ BufferBarrierScope::StorageBuffer,
                                BufferBarrierScope::TransferSrc,

@@ -237,7 +237,7 @@ main()
 
       cmdBuffer->SetPipelineState(state);
       cmdBuffer->BindVertexBuffer(vertexBuffer, 0);
-      cmdBuffer->BindUniformBuffer(uniformBuffer, 0, 0);
+      cmdBuffer->BindUniformBuffer(uniformBuffer, 0, 0, 0, 10*10*4);
       cmdBuffer->BindSampledTexture(sampledTexture, 0, 1);
       cmdBuffer->BindSampler(0, 2);
       cmdBuffer->Draw(3);

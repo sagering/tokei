@@ -168,11 +168,6 @@ VulkanCmdBuffer::BeginRenderPass(RenderPassBeginInfo const& beginInfo)
 {
   cmdBufferState = {};
 
-  cmdBufferState.bufferInfos.reserve(8);
-  cmdBufferState.imageInfos.reserve(8);
-  cmdBufferState.descriptorWrites.reserve(8);
-  cmdBufferState.descriptorSets.reserve(8);
-
   RenderPass rp = {};
   rp.subpassCnt = 1;
 
@@ -349,61 +344,53 @@ VulkanCmdBuffer::BindIndexBuffer(Buffer buffer)
 void
 VulkanCmdBuffer::BindUniformBuffer(Buffer buffer,
                                    uint32_t set,
-                                   uint32_t binding)
+                                   uint32_t binding,
+                                   uint32_t offset,
+                                   uint32_t range)
 {
   auto bufferInfo = (VulkanDevice::BufferInfo*)buffer;
+  auto& d = cmdBufferState.sets[set].bindings[binding];
 
-  cmdBufferState.descriptorSets.push_back(set);
-  cmdBufferState.bufferInfos.push_back(
-    vkiDescriptorBufferInfo(bufferInfo->buffer, 0, bufferInfo->size));
-  cmdBufferState.descriptorWrites.push_back(
-    vkiWriteDescriptorSet(VK_NULL_HANDLE,
-                          binding,
-                          0,
-                          1,
-                          VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-                          nullptr,
-                          &cmdBufferState.bufferInfos.back(),
-                          nullptr));
+  if (d.bufferInfo.buffer == bufferInfo->buffer &&
+      d.bufferInfo.range == range) {
+    cmdBufferState.sets[set].dynamicOffsetsDirty = true;
+  } else {
+    d.bufferInfo = vkiDescriptorBufferInfo(bufferInfo->buffer, 0, range);
+    cmdBufferState.sets[set].dirty = true;
+  }
+
+  d.dynamicOffset = offset;
 }
 
 void
 VulkanCmdBuffer::BindStorageBuffer(Buffer buffer,
                                    uint32_t set,
-                                   uint32_t binding)
+                                   uint32_t binding,
+                                   uint32_t offset,
+                                   uint32_t range)
 {
   auto bufferInfo = (VulkanDevice::BufferInfo*)buffer;
+  auto& d = cmdBufferState.sets[set].bindings[binding];
 
-  cmdBufferState.descriptorSets.push_back(set);
-  cmdBufferState.bufferInfos.push_back(
-    vkiDescriptorBufferInfo(bufferInfo->buffer, 0, bufferInfo->size));
-  cmdBufferState.descriptorWrites.push_back(
-    vkiWriteDescriptorSet(VK_NULL_HANDLE,
-                          binding,
-                          0,
-                          1,
-                          VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-                          nullptr,
-                          &cmdBufferState.bufferInfos.back(),
-                          nullptr));
+  if (d.bufferInfo.buffer == bufferInfo->buffer &&
+      d.bufferInfo.range == range) {
+    cmdBufferState.sets[set].dynamicOffsetsDirty = true;
+  } else {
+    d.bufferInfo = vkiDescriptorBufferInfo(bufferInfo->buffer, 0, range);
+    cmdBufferState.sets[set].dirty = true;
+  }
+
+  d.dynamicOffset = offset;
 }
 
 void
 VulkanCmdBuffer::BindSampler(uint32_t set, uint32_t binding)
 {
   auto sampler = GetSampler(&device->staticResources);
-  cmdBufferState.descriptorSets.push_back(set);
-  cmdBufferState.imageInfos.push_back(
-    vkiDescriptorImageInfo(sampler, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_UNDEFINED));
-  cmdBufferState.descriptorWrites.push_back(
-    vkiWriteDescriptorSet(VK_NULL_HANDLE,
-                          binding,
-                          0,
-                          1,
-                          VK_DESCRIPTOR_TYPE_SAMPLER,
-                          &cmdBufferState.imageInfos.back(),
-                          nullptr,
-                          nullptr));
+  auto& d = cmdBufferState.sets[set].bindings[binding];
+  d.imageInfo =
+    vkiDescriptorImageInfo(sampler, VK_NULL_HANDLE, VK_IMAGE_LAYOUT_UNDEFINED);
+  cmdBufferState.sets[set].dirty = true;
 }
 
 void
@@ -412,21 +399,12 @@ VulkanCmdBuffer::BindSampledTexture(Texture texture,
                                     uint32_t binding)
 {
   auto textureInfo = (VulkanDevice::TextureInfo*)texture;
-
-  cmdBufferState.descriptorSets.push_back(set);
-  cmdBufferState.imageInfos.push_back(
+  auto& d = cmdBufferState.sets[set].bindings[binding];
+  d.imageInfo =
     vkiDescriptorImageInfo(VK_NULL_HANDLE,
                            textureInfo->view,
-                           VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
-  cmdBufferState.descriptorWrites.push_back(
-    vkiWriteDescriptorSet(VK_NULL_HANDLE,
-                          binding,
-                          0,
-                          1,
-                          VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-                          &cmdBufferState.imageInfos.back(),
-                          nullptr,
-                          nullptr));
+                           VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  cmdBufferState.sets[set].dirty = true;
 }
 
 void
@@ -446,80 +424,109 @@ VulkanCmdBuffer::SetPipelineState(PipelineState pipelineState)
 }
 
 void
-VulkanCmdBuffer::Draw(uint32_t cnt)
+VulkanCmdBuffer::flushDescriptorSets(VkPipelineBindPoint bindPoint)
 {
-  uint32_t const writeCnt =
-    static_cast<uint32_t>(cmdBufferState.descriptorSets.size());
-
-  if (writeCnt > 0) {
-    auto set = AllocateDescriptorSet(&device->arena,
-                                     &cmdBufferState.pipelineLayout.layouts[0]);
-
-    for (uint32_t i = 0; i < writeCnt; ++i) {
-      cmdBufferState.descriptorWrites[i].dstSet = set;
+  for (int i = 0; i < cmdBufferState.pipelineLayout.layoutCnt; ++i) {
+    if (!cmdBufferState.sets[i].dirty &&
+        !cmdBufferState.sets[i].dynamicOffsetsDirty) {
+      continue;
     }
 
-    vkUpdateDescriptorSets(device->device,
-                           writeCnt,
-                           cmdBufferState.descriptorWrites.data(),
-                           0,
-                           nullptr);
+    uint32_t dynamicOffsets[8];
+    uint32_t dynamicOffsetCnt = 0;
+
+    if (cmdBufferState.sets[i].dirty) {
+      VkWriteDescriptorSet writes[8];
+      uint32_t writeCnt = 0;
+
+      cmdBufferState.sets[i].set = AllocateDescriptorSet(
+        &device->arena, &cmdBufferState.pipelineLayout.layouts[i]);
+
+      auto const& bindings = cmdBufferState.sets[i].bindings;
+      auto bindingCnt = cmdBufferState.pipelineLayout.layouts[i].bindingCnt;
+
+      if (bindingCnt > 8) {
+        bindingCnt = 8;
+      }
+
+      for (int j = 0; j < bindingCnt; ++j) {
+        writes[j] = vkiWriteDescriptorSet(
+          cmdBufferState.sets[i].set,
+          cmdBufferState.pipelineLayout.layouts[i].bindings[j].binding,
+          0,
+          1,
+          cmdBufferState.pipelineLayout.layouts[i].bindings[j].descriptorType,
+          nullptr,
+          nullptr,
+          nullptr);
+
+        switch (
+          cmdBufferState.pipelineLayout.layouts[i].bindings[j].descriptorType) {
+          case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+          case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: {
+            writes[j].pBufferInfo = &bindings[j].bufferInfo;
+            dynamicOffsets[dynamicOffsetCnt++] = bindings[j].dynamicOffset;
+            break;
+          }
+          case VK_DESCRIPTOR_TYPE_SAMPLER:
+          case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE: {
+            writes[j].pImageInfo = &bindings[j].imageInfo;
+            break;
+          }
+        }
+      }
+
+      if (bindingCnt > 0) {
+        vkUpdateDescriptorSets(device->device, bindingCnt, writes, 0, nullptr);
+      }
+    } else if (cmdBufferState.sets[i].dynamicOffsetsDirty) {
+      auto const& bindings = cmdBufferState.sets[i].bindings;
+      auto bindingCnt = cmdBufferState.pipelineLayout.layouts[i].bindingCnt;
+
+      if (bindingCnt > 8) {
+        bindingCnt = 8;
+      }
+
+      for (int j = 0; j < bindingCnt; ++j) {
+        switch (
+          cmdBufferState.pipelineLayout.layouts[i].bindings[j].descriptorType) {
+          case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+          case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC: {
+            dynamicOffsets[dynamicOffsetCnt++] = bindings[j].dynamicOffset;
+            break;
+          }
+        }
+      }
+    }
 
     auto layout = GetPipelineLayout(&device->staticResources,
                                     &cmdBufferState.pipelineLayout);
+
     vkCmdBindDescriptorSets(cmdBuffer,
-                            VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            bindPoint,
                             layout,
                             0,
                             1,
-                            &set,
-                            0,
-                            nullptr);
+                            &cmdBufferState.sets[i].set,
+                            dynamicOffsetCnt,
+                            dynamicOffsets);
 
-    cmdBufferState.descriptorSets.clear();
-    cmdBufferState.bufferInfos.clear();
-    cmdBufferState.imageInfos.clear();
+    cmdBufferState.sets[i].dirty = false;
+    cmdBufferState.sets[i].dynamicOffsetsDirty = false;
   }
+}
 
+void
+VulkanCmdBuffer::Draw(uint32_t cnt)
+{
+  flushDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS);
   vkCmdDraw(cmdBuffer, cnt, 1, 0, 0);
 }
 
 void
 VulkanCmdBuffer::DrawIndexed(uint32_t cnt)
 {
-  uint32_t const writeCnt =
-    static_cast<uint32_t>(cmdBufferState.descriptorSets.size());
-
-  if (writeCnt > 0) {
-    auto set = AllocateDescriptorSet(&device->arena,
-                                     &cmdBufferState.pipelineLayout.layouts[0]);
-
-    for (uint32_t i = 0; i < writeCnt; ++i) {
-      cmdBufferState.descriptorWrites[i].dstSet = set;
-    }
-
-    vkUpdateDescriptorSets(device->device,
-                           writeCnt,
-                           cmdBufferState.descriptorWrites.data(),
-                           0,
-                           nullptr);
-
-    auto layout = GetPipelineLayout(&device->staticResources,
-                                    &cmdBufferState.pipelineLayout);
-    vkCmdBindDescriptorSets(cmdBuffer,
-                            VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            layout,
-                            0,
-                            1,
-                            &set,
-                            0,
-                            nullptr);
-
-    cmdBufferState.descriptorSets.clear();
-    cmdBufferState.bufferInfos.clear();
-    cmdBufferState.imageInfos.clear();
-  }
-
+  flushDescriptorSets(VK_PIPELINE_BIND_POINT_GRAPHICS);
   vkCmdDrawIndexed(cmdBuffer, cnt, 1, 0, 0, 0);
 }
 
@@ -532,38 +539,6 @@ VulkanCmdBuffer::EndRenderPass()
 void
 VulkanCmdBuffer::Dispatch(uint32_t x, uint32_t y, uint32_t z)
 {
-  uint32_t const writeCnt =
-    static_cast<uint32_t>(cmdBufferState.descriptorSets.size());
-
-  if (writeCnt > 0) {
-    auto set = AllocateDescriptorSet(&device->arena,
-                                     &cmdBufferState.pipelineLayout.layouts[0]);
-
-    for (uint32_t i = 0; i < writeCnt; ++i) {
-      cmdBufferState.descriptorWrites[i].dstSet = set;
-    }
-
-    vkUpdateDescriptorSets(device->device,
-                           writeCnt,
-                           cmdBufferState.descriptorWrites.data(),
-                           0,
-                           nullptr);
-
-    auto layout = GetPipelineLayout(&device->staticResources,
-                                    &cmdBufferState.pipelineLayout);
-    vkCmdBindDescriptorSets(cmdBuffer,
-                            VK_PIPELINE_BIND_POINT_COMPUTE,
-                            layout,
-                            0,
-                            1,
-                            &set,
-                            0,
-                            nullptr);
-
-    cmdBufferState.descriptorSets.clear();
-    cmdBufferState.bufferInfos.clear();
-    cmdBufferState.imageInfos.clear();
-  }
-
+  flushDescriptorSets(VK_PIPELINE_BIND_POINT_COMPUTE);
   vkCmdDispatch(cmdBuffer, x, y, z);
 }

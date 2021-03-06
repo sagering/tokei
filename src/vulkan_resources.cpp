@@ -336,7 +336,7 @@ ReflectLayout(std::vector<uint32_t> const& code,
       return false;
     }
     layout.bindings[layout.bindingCnt].binding.descriptorType =
-      VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     ++layout.bindingCnt;
   }
 
@@ -376,7 +376,7 @@ ReflectLayout(std::vector<uint32_t> const& code,
       return false;
     }
     layout.bindings[layout.bindingCnt].binding.descriptorType =
-      VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+      VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
     ++layout.bindingCnt;
   }
 

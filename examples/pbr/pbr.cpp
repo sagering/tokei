@@ -258,7 +258,7 @@ main()
 
     cmdBuffer->SetPipelineState(state);
     cmdBuffer->BindVertexBuffer(mesh.vertexBuffer, 0);
-    cmdBuffer->BindUniformBuffer(uniformBuffer, 0, 0);
+    cmdBuffer->BindUniformBuffer(uniformBuffer, 0, 0, 0, sizeof(UBO));
     cmdBuffer->Draw(mesh.vertexCnt);
     cmdBuffer->EndRenderPass();
 

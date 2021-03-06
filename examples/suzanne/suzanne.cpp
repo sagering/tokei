@@ -210,7 +210,7 @@ main()
   while (true) {
     Texture swapchainTexture;
 
-    // mvp.model = glm::rotate(mvp.model, 0.02f, glm::vec3{ 0, 1, 0 });
+    //mvp.model = glm::rotate(mvp.model, 0.02f, glm::vec3{ 0, 1, 0 });
 
     memcpy(data, &mvp, sizeof(mvp));
 
@@ -264,7 +264,7 @@ main()
 
     cmdBuffer->BindVertexBuffer(mesh.vbuf, 0);
     cmdBuffer->BindIndexBuffer(mesh.ibuf);
-    cmdBuffer->BindUniformBuffer(uniformBuffer, 0, 0);
+    cmdBuffer->BindUniformBuffer(uniformBuffer, 0, 0, 0, sizeof(glm::mat4x4));
 
     state.viewport.scissors.x = 0;
 	state.multisample.rasterizationSamples = samples;
@@ -288,7 +288,7 @@ main()
 
     cmdBuffer->BindVertexBuffer(mesh.vbuf, 0);
     cmdBuffer->BindIndexBuffer(mesh.ibuf);
-    cmdBuffer->BindUniformBuffer(uniformBuffer, 0, 0);
+    cmdBuffer->BindUniformBuffer(uniformBuffer, 0, 0, 0, sizeof(glm::mat4x4));
 
     state.viewport.scissors.x = width / 2;
 	state.multisample.rasterizationSamples = 1;

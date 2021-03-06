@@ -388,10 +388,14 @@ public:
   virtual void SetPipelineState(PipelineState pipelineState) = 0;
   virtual void BindUniformBuffer(Buffer buffer,
                                  uint32_t set,
-                                 uint32_t binding) = 0;
+                                 uint32_t binding,
+                                 uint32_t offset,
+                                 uint32_t range) = 0;
   virtual void BindStorageBuffer(Buffer buffer,
                                  uint32_t set,
-                                 uint32_t binding) = 0;
+                                 uint32_t binding,
+                                 uint32_t offset,
+                                 uint32_t range) = 0;
   virtual void BindSampler(uint32_t set, uint32_t binding) = 0;
   virtual void BindSampledTexture(Texture texture,
                                   uint32_t set,
