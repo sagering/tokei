@@ -108,7 +108,6 @@ struct TextureCreateInfo
   uint32_t samples = 1;
   PixelFormat format;
   TextureUsageFlags usageFlags;
-  char const* name = nullptr;
 };
 
 struct BufferCreateInfo
@@ -116,7 +115,6 @@ struct BufferCreateInfo
   uint64_t size;
   BufferUsageFlags usageFlags;
   MemoryUsage memoryUsage;
-  char const* name = nullptr;
 };
 
 struct SwapchainCreateInfo

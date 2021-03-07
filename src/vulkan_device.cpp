@@ -17,22 +17,6 @@ Device::Create()
   return new VulkanDevice();
 }
 
-uint32_t
-FindMemoryTypeIdx(const VkMemoryRequirements& memoryRequirements,
-                  const VkPhysicalDeviceMemoryProperties& memoryProperties,
-                  const VkMemoryPropertyFlags& propertyFlags)
-{
-  for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; ++i) {
-    if (memoryRequirements.memoryTypeBits & (1 << i) &&
-        (memoryProperties.memoryTypes[i].propertyFlags & propertyFlags) ==
-          propertyFlags) {
-      return i;
-    }
-  }
-
-  return -1;
-}
-
 VkSurfaceKHR
 CreateSurface(VkInstance instance, void* windowHandle)
 {
@@ -200,9 +184,6 @@ VulkanDevice::CreateTexture(TextureCreateInfo const& desc)
   info->allocation = allocation;
   info->size = allocInfo.size;
   info->subresource = subresource;
-  info->accessScope = { VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                        0,
-                        VK_IMAGE_LAYOUT_UNDEFINED };
 
   textures.push_back(info);
   return (Texture)info;
@@ -299,9 +280,6 @@ VulkanDevice::CreateSwapchain(SwapchainCreateInfo const& createInfo)
     auto info = new TextureInfo{};
     info->image = swapchainImages[i];
     info->size = 0;
-    info->accessScope = { VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                          0,
-                          VK_IMAGE_LAYOUT_UNDEFINED };
     info->desc.width = createInfo.width;
     info->desc.height = createInfo.height;
     info->desc.format = createInfo.format;
@@ -309,7 +287,6 @@ VulkanDevice::CreateSwapchain(SwapchainCreateInfo const& createInfo)
     info->desc.depth = 1;
     info->desc.layers = 1;
     info->desc.mipLevels = 1;
-    info->desc.name = createInfo.name;
     info->subresource.aspectMask =
       GetImageAspectFlags(GetVkFormat(info->desc.format));
     info->subresource.baseMipLevel = 0;
@@ -350,15 +327,8 @@ VulkanDevice::AquireNext(Swapchain swapchain, Texture* texture)
 
   auto textureInfo = (TextureInfo*)info->textures[info->nextTextureIdx];
 
-  if (textureInfo->submitTypeCnt > 1) {
-    assert(textureInfo->sem == VK_NULL_HANDLE);
-
-    textureInfo->sem = sem;
-
-    // layout not changed by "aquire" op
-    textureInfo->accessScope.stageFlags = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-    textureInfo->accessScope.accessFlags = VK_ACCESS_MEMORY_WRITE_BIT;
-  }
+  assert(textureInfo->sem == VK_NULL_HANDLE);
+  textureInfo->sem = sem;
 
   *texture = (Texture)textureInfo;
 
@@ -378,14 +348,12 @@ VulkanDevice::Present(Swapchain swapchain)
 
   VkSemaphore sem = VK_NULL_HANDLE;
 
-  if (textureInfo->submitTypeCnt > 1) {
-    assert(textureInfo->sem != VK_NULL_HANDLE);
-    sem = textureInfo->sem;
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &sem;
-    ReleaseSemaphore(&allocator, textureInfo->sem);
-    textureInfo->sem = VK_NULL_HANDLE;
-  }
+  assert(textureInfo->sem != VK_NULL_HANDLE);
+  sem = textureInfo->sem;
+  presentInfo.waitSemaphoreCount = 1;
+  presentInfo.pWaitSemaphores = &sem;
+  ReleaseSemaphore(&allocator, textureInfo->sem);
+  textureInfo->sem = VK_NULL_HANDLE;
 
   vkQueuePresentKHR(queue, &presentInfo);
 
@@ -453,10 +421,6 @@ VulkanDevice::Recycle()
           auto bufferInfo = (BufferInfo*)res.resource;
           vkDestroyBuffer(device, bufferInfo->buffer, nullptr);
 
-          if (bufferInfo->event) {
-            ReleaseEvent(&allocator, bufferInfo->event);
-          }
-
           vmaFreeMemory(vmaAllocator, bufferInfo->allocation);
 
           for (auto it = buffers.begin(); it != buffers.end(); ++it) {
@@ -473,10 +437,6 @@ VulkanDevice::Recycle()
           auto textureInfo = (TextureInfo*)res.resource;
           vkDestroyImage(device, textureInfo->image, nullptr);
           vkDestroyImageView(device, textureInfo->view, nullptr);
-
-          if (textureInfo->event) {
-            ReleaseEvent(&allocator, textureInfo->event);
-          }
 
           vmaFreeMemory(vmaAllocator, textureInfo->allocation);
 
@@ -557,6 +517,9 @@ VulkanDevice::Submit(CmdBuffer* cmdBuffer_)
   std::vector<VkPipelineStageFlags> waitStages = {};
   std::vector<VkSemaphore> signalSemaphores = {};
 
+  // TODO: populate waitSemaphores to do actual waiting
+  // TODO: populate signalSemaphores
+
   vkEndCommandBuffer(cmdBuffer->cmdBuffer);
 
   auto fence = AllocateFence(&allocator);
@@ -571,6 +534,7 @@ VulkanDevice::Submit(CmdBuffer* cmdBuffer_)
                   signalSemaphores.data());
 
   vkQueueSubmit(queue, 1, &submitInfo, fence);
+
   delete cmdBuffer;
 
   ticketFences.push({ ticketCounter, fence });

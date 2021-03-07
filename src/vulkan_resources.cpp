@@ -860,8 +860,11 @@ AllocateCommandPool(ResourceArenaAllocator* arena, uint32_t queueFamilyIdx)
 {
   // TODO: reuse command pools: the problem is, that we cannot free all command
   // buffers allocated from a pool at once, so we also need to keep track of all
-  // allocated command buffers; This is not hard, but I don't feel like doing
-  // this right now.
+  // allocated command buffers. Only then are we able reclaim the pool memory
+  // used used by the command buffers through vkResetCommandBuffer /
+  // vkFreeCommandBuffers. vkResetCommandPool does not have the desired effect
+  // of invalidating / freeing any allocated command buffer. This is not hard,
+  // but I don't feel like doing this right now.
 
   // auto it = arena->free.cmdPools.find(queueFamilyIdx);
   // if (it != arena->free.cmdPools.end()) {

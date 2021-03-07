@@ -357,24 +357,19 @@ private:
     VmaAllocation allocation;
     AccessScope accessScope;
     VkBuffer buffer;
-
-    VkEvent event = VK_NULL_HANDLE;
-    VkSemaphore sem = VK_NULL_HANDLE;
-    uint32_t queueCnt = 1;
   };
 
   struct TextureInfo
   {
     VkDeviceSize size;
     VmaAllocation allocation;
-    AccessScope accessScope;
     VkImage image;
     VkImageView view;
     TextureCreateInfo desc;
     VkImageSubresourceRange subresource;
 
-    VkEvent event = VK_NULL_HANDLE;
     VkSemaphore sem = VK_NULL_HANDLE;
+
     uint32_t submitTypeCnt = 1;
   };
 
