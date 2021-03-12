@@ -202,9 +202,6 @@ struct AccessScope
 
 class VulkanDevice;
 
-struct VulkanCmdBufferData
-{};
-
 class VulkanCmdBuffer : CmdBuffer
 {
 public:
