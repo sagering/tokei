@@ -133,6 +133,7 @@ main()
 								   UsageScope::TransferSrc,
 								   storageBuffer });
 		cmdBuffer->Copy(stagingBuffer, storageBuffer);
+		cmdBuffer->BufferBarrier({ UsageScope::TransferDst, UsageScope::Host, stagingBuffer });
 
 		Timer perfTimer;
 		perfTimer.reset();

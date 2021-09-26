@@ -56,7 +56,8 @@ enum class UsageScope
 	SampledTexture,
 	PresentSrc,
 	TransferSrc,
-	TransferDst
+	TransferDst,
+	Host
 };
 
 typedef struct Buffer_T* Buffer;
@@ -168,6 +169,8 @@ public:
 
 	virtual bool AquireNext(Swapchain swapchain, Texture* texture, Semaphore* signal) = 0;
 	virtual bool Present(Swapchain swapchain, Semaphore* wait) = 0;
+
+	// TODO: Returning a Ticket *every* time even if not needed a bad idea, because fences implicitly makes all memory available (cache flush). 
 	virtual Ticket Submit(CmdBuffer* cmdBuffer, Semaphore* wait, UsageScope waitScope, Semaphore* signal) = 0;
 
 	virtual void Release(Buffer) = 0;

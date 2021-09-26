@@ -296,8 +296,6 @@ VulkanDevice::CreateSwapchain(SwapchainCreateInfo const& createInfo)
 		info->subresource.levelCount = info->desc.mipLevels;
 		info->subresource.layerCount = info->desc.layers;
 
-		info->submitTypeCnt = 3;
-
 		auto imageViewCreateInfo =
 			vkiImageViewCreateInfo(info->image,
 				VK_IMAGE_VIEW_TYPE_2D,

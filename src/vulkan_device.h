@@ -10,14 +10,6 @@
 #include <unordered_map>
 #include <vector>
 
-namespace {
-	VkAccessFlags const writeMask =
-		VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-		VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_TRANSFER_WRITE_BIT |
-		VK_ACCESS_HOST_WRITE_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-
-}
-
 struct AccessScope
 {
 	VkPipelineStageFlags stageFlags = 0;
@@ -29,6 +21,15 @@ struct AccessScope
 		AccessScope scope;
 		scope.stageFlags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		scope.accessFlags = 0;
+		scope.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		return scope;
+	}
+
+	static inline AccessScope Host()
+	{
+		AccessScope scope;
+		scope.stageFlags = VK_PIPELINE_STAGE_HOST_BIT;
+		scope.accessFlags = VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT;
 		scope.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		return scope;
 	}
@@ -206,6 +207,8 @@ struct AccessScope
 				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 		case UsageScope::PresentSrc:
 			return AccessScope::PresentSrc();
+		case UsageScope::Host:
+			return AccessScope::Host();
 		default:
 			return {};
 		}
@@ -376,11 +379,6 @@ private:
 		VkImageView view;
 		TextureCreateInfo desc;
 		VkImageSubresourceRange subresource;
-
-		uint32_t queueIdx = 0;
-		VkSemaphore sem = VK_NULL_HANDLE;
-
-		uint32_t submitTypeCnt = 1;
 	};
 
 	struct SwapchainInfo
