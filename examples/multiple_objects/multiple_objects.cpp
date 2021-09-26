@@ -256,7 +256,7 @@ main()
 		Buffer buffer;
 		void* data;
 
-		uint32_t next = 0;
+		uint32_t cur = 0;
 		Ticket tickets[3] = {};
 
 		void Init(Device* device)
@@ -273,11 +273,16 @@ main()
 
 		uint32_t GetNextOfset(Device* device)
 		{
-			uint32_t offset = next * UBO_BUFFER_SIZE;
-			device->Wait(tickets[next]);
-			next = (next + 1) % NUM_UBOS;
+			uint32_t offset = cur * UBO_BUFFER_SIZE;
+			device->Wait(tickets[cur]);
 			return offset;
 		}
+
+		void Inc(Ticket ticket) {
+			tickets[cur] = ticket;
+			cur = (cur + 1) % NUM_UBOS;
+		}
+
 	} uniforms;
 
 	uniforms.Init(device);
@@ -371,7 +376,8 @@ main()
 									UsageScope::PresentSrc,
 									swapchainTexture });
 		Semaphore renderDone;
-		device->Submit(cmdBuffer, &available, UsageScope::ColorAttachment, &renderDone);
+		Ticket ticket = device->Submit(cmdBuffer, &available, UsageScope::ColorAttachment, &renderDone);
+		uniforms.Inc(ticket);
 		device->Present(swapchain, &renderDone);
 
 		device->Recycle();
