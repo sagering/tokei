@@ -347,29 +347,15 @@ enum class TextureBarrierScope
 
 struct TextureBarrierInfo
 {
-  TextureBarrierScope src;
-  TextureBarrierScope dst;
+  UsageScope src;
+  UsageScope dst;
   Texture texture;
-};
-
-enum class BufferBarrierScope
-{
-  None,
-  IndexBuffer,
-  VertexBuffer,
-  IndirectBuffer,
-  UniformBuffer,
-  StorageBuffer,
-  UniformTexelBuffer,
-  StorageTexelBuffer,
-  TransferSrc,
-  TransferDst
 };
 
 struct BufferBarrierInfo
 {
-  BufferBarrierScope src;
-  BufferBarrierScope dst;
+  UsageScope src;
+  UsageScope dst;
   Buffer buffer;
 };
 
