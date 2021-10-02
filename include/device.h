@@ -148,7 +148,6 @@ struct SwapchainCreateInfo
 	uint32_t textureCnt;
 	void* platformHandle;
 	Swapchain oldSwapchain;
-	char const* name = nullptr;
 };
 
 class CmdBuffer;

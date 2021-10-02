@@ -147,7 +147,6 @@ main()
 	swapchainCreateInfo.textureCnt = 3;
 	swapchainCreateInfo.platformHandle = (void*)hwnd;
 	swapchainCreateInfo.oldSwapchain = nullptr;
-	swapchainCreateInfo.name = "swapchain";
 
 	Swapchain swapchain = device->CreateSwapchain(swapchainCreateInfo);
 
