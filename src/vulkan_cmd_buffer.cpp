@@ -65,11 +65,11 @@ VulkanCmdBuffer::Copy(Buffer dst, Buffer src)
 	auto dstBufferInfo = (VulkanDevice::BufferInfo*)dst;
 	auto srcBufferInfo = (VulkanDevice::BufferInfo*)src;
 
-	VkBufferCopy copy =
+	VkBufferCopy pkCopy =
 		vkiBufferCopy(0, 0, std::min(srcBufferInfo->size, dstBufferInfo->size));
 
 	vkCmdCopyBuffer(
-		cmdBuffer, srcBufferInfo->buffer, dstBufferInfo->buffer, 1, &copy);
+		cmdBuffer, srcBufferInfo->buffer, dstBufferInfo->buffer, 1, &pkCopy);
 }
 
 void
@@ -84,7 +84,7 @@ VulkanCmdBuffer::CopyBufferToTexture(Texture dst, Buffer src)
 	subresouce.layerCount = dstTextureInfo->subresource.layerCount;
 	subresouce.mipLevel = dstTextureInfo->subresource.baseMipLevel;
 
-	VkBufferImageCopy copy = vkiBufferImageCopy(0,
+	VkBufferImageCopy pkCopy = vkiBufferImageCopy(0,
 		0,
 		0,
 		subresouce,
@@ -98,7 +98,7 @@ VulkanCmdBuffer::CopyBufferToTexture(Texture dst, Buffer src)
 		dstTextureInfo->image,
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		1,
-		&copy);
+		&pkCopy);
 }
 
 void
@@ -350,7 +350,7 @@ VulkanCmdBuffer::BindSampledTexture(Texture texture,
 void
 VulkanCmdBuffer::SetPipelineState(PipelineState pipelineState)
 {
-	Pipeline1 pipe = { cmdBufferState.renderPass,
+	Pipeline pipe = { cmdBufferState.renderPass,
 					   cmdBufferState.subpass,
 					   &pipelineState };
 	auto pipeline = GetPipeline(

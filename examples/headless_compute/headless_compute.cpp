@@ -1,7 +1,6 @@
 #pragma once
 
-#include <cmd_buffer.h>
-#include <device.h>
+#include <pokei.h>
 
 #include <chrono>
 #include <iostream>
@@ -13,15 +12,15 @@ using u32 = uint32_t;
 
 struct UBO
 {
-	float dt;
-	u32 particleCnt;
+  float dt;
+  u32 particleCnt;
 };
 
 struct Particle
 {
-	// vec4 because of alignment requirements
-	glm::vec4 position;
-	glm::vec4 velocity;
+  // vec4 because of alignment requirements
+  glm::vec4 position;
+  glm::vec4 velocity;
 };
 
 u32 const particleCnt = (uint16_t)-1;
@@ -30,125 +29,155 @@ Particle particles[particleCnt];
 float
 myRand()
 {
-	return 2.f * static_cast<float>(rand()) / RAND_MAX - 1.f;
+  return 2.f * static_cast<float>(rand()) / RAND_MAX - 1.f;
 }
 
 void
 initParticles()
 {
-	// random x, y in [-1, 1], z = 0
-	// random velocities in the xy plane
+  // random x, y in [-1, 1], z = 0
+  // random velocities in the xy plane
 
-	for (auto& particle : particles) {
-		particle.position.x = myRand();
-		particle.position.y = myRand();
-		particle.position.z = 0.f;
-		particle.position.w = 1.f;
+  for (auto& particle : particles) {
+    particle.position.x = myRand();
+    particle.position.y = myRand();
+    particle.position.z = 0.f;
+    particle.position.w = 1.f;
 
-		particle.velocity.x = myRand() * 0.001f;
-		particle.velocity.y = myRand() * 0.001f;
-		particle.velocity.z = 0.f;
-		particle.velocity.w = 0.f;
-	}
+    particle.velocity.x = myRand() * 0.001f;
+    particle.velocity.y = myRand() * 0.001f;
+    particle.velocity.z = 0.f;
+    particle.velocity.w = 0.f;
+  }
 }
 
 struct Timer
 {
-	void reset() { startTime = now(); }
-	float getDt() { return now() - startTime; }
+  void reset() { startTime = now(); }
+  float getDt() { return now() - startTime; }
 
-	double now()
-	{
-		return std::chrono::duration_cast<std::chrono::duration<double>>(
-			std::chrono::steady_clock::now().time_since_epoch())
-			.count();
-	}
+  double now()
+  {
+    return std::chrono::duration_cast<std::chrono::duration<double>>(
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
+  }
 
-	double startTime = 0.f;
+  double startTime = 0.f;
 };
 
 int
 main()
 {
-	Timer timer;
-	timer.reset();
+  Timer timer;
+  timer.reset();
 
-	UBO ubo = { 0.f, particleCnt };
+  UBO ubo = { 0.f, particleCnt };
 
-	initParticles();
+  initParticles();
 
-	auto device = Device::Create();
+  Device device;
+  pkCreateDevice(&device);
 
-	PipelineState state = {};
-	state.shader.computeShader = "resources/shaders/compute.comp.spv";
+  PipelineState state = {};
+  state.shader.computeShader = "resources/shaders/compute.comp.spv";
 
-	Buffer uniformBuffer;
-	void* uboData;
-	BufferCreateInfo bufferCreateInfo;
-	bufferCreateInfo.size = sizeof(ubo);
-	bufferCreateInfo.usageFlags = BufferUsageFlagBits::BUF_UNIFORM_BUFFER;
-	bufferCreateInfo.memoryUsage = MemoryUsage::CPU_TO_GPU;
-	std::tie(uniformBuffer, uboData) = device->CreateBuffer(bufferCreateInfo);
+  Buffer uniformBuffer;
+  void* uboData;
+  BufferCreateInfo bufferCreateInfo;
+  bufferCreateInfo.size = sizeof(ubo);
+  bufferCreateInfo.usageFlags = BufferUsageFlagBits::BUF_UNIFORM_BUFFER;
+  bufferCreateInfo.memoryUsage = MemoryUsage::CPU_TO_GPU;
+  pkCreateBuffer(device, &bufferCreateInfo, &uniformBuffer, &uboData);
 
-	void* stagingBufferData;
-	Buffer stagingBuffer;
-	bufferCreateInfo.size = sizeof(Particle) * particleCnt;
-	bufferCreateInfo.usageFlags = BufferUsageFlagBits::BUF_TRANSFER_DST |
-		BufferUsageFlagBits::BUF_TRANSFER_SRC;
-	bufferCreateInfo.memoryUsage = MemoryUsage::CPU_ONLY;
-	std::tie(stagingBuffer, stagingBufferData) =
-		device->CreateBuffer(bufferCreateInfo);
+  void* stagingBufferData;
+  Buffer stagingBuffer;
+  bufferCreateInfo.size = sizeof(Particle) * particleCnt;
+  bufferCreateInfo.usageFlags = BufferUsageFlagBits::BUF_TRANSFER_DST |
+                                BufferUsageFlagBits::BUF_TRANSFER_SRC;
+  bufferCreateInfo.memoryUsage = MemoryUsage::CPU_ONLY;
+  pkCreateBuffer(device, &bufferCreateInfo, &stagingBuffer, &stagingBufferData);
 
-	memcpy(stagingBufferData, particles, sizeof(Particle) * particleCnt);
+  memcpy(stagingBufferData, particles, sizeof(Particle) * particleCnt);
 
-	Buffer storageBuffer;
-	bufferCreateInfo.size = sizeof(Particle) * particleCnt;
-	bufferCreateInfo.usageFlags = BufferUsageFlagBits::BUF_STORAGE_BUFFER |
-		BufferUsageFlagBits::BUF_TRANSFER_DST |
-		BufferUsageFlagBits::BUF_TRANSFER_SRC;
-	bufferCreateInfo.memoryUsage = MemoryUsage::GPU_ONLY;
-	std::tie(storageBuffer, std::ignore) = device->CreateBuffer(bufferCreateInfo);
+  Buffer storageBuffer;
+  bufferCreateInfo.size = sizeof(Particle) * particleCnt;
+  bufferCreateInfo.usageFlags = BufferUsageFlagBits::BUF_STORAGE_BUFFER |
+                                BufferUsageFlagBits::BUF_TRANSFER_DST |
+                                BufferUsageFlagBits::BUF_TRANSFER_SRC;
+  bufferCreateInfo.memoryUsage = MemoryUsage::GPU_ONLY;
+  void* dummy;
+  pkCreateBuffer(device, &bufferCreateInfo, &storageBuffer, &dummy);
 
-	{
-		CmdBuffer* cmdBuffer = device->GetCmdBuffer();
-		cmdBuffer->Copy(storageBuffer, stagingBuffer);
-		cmdBuffer->BufferBarrier({ UsageScope::TransferDst,
-								   UsageScope::StorageBuffer,
-								   storageBuffer });
-		auto ticket = device->Submit(cmdBuffer, nullptr, UsageScope::None, nullptr);
+  {
+    Queue queue;
+    CmdBuffer cmdBuffer;
+    pkGetQueue(device, QueueType::Compute, &queue);
+    pkCreateCmdBuffer(queue, &cmdBuffer);
 
-	}
+    pkCopy(cmdBuffer, storageBuffer, stagingBuffer);
 
-	while (true) {
-		ubo.dt = timer.getDt();
-		memcpy(uboData, &ubo, sizeof(ubo));
+    auto bufferBarrier =
+      BufferBarrier{ SynchronizationScope{ PipelineStageFlagBits::TRANSFER_BIT,
+                                           AccessFlagBits::TRANSFER_WRITE_BIT },
+                     SynchronizationScope{ PipelineStageFlagBits::COMPUTE_BIT,
+                                           AccessFlagBits::SHADER_READ_BIT |
+                                             AccessFlagBits::SHADER_WRITE_BIT },
+                     storageBuffer };
 
-		CmdBuffer* cmdBuffer = device->GetCmdBuffer();
+    insertBarrier(cmdBuffer, &bufferBarrier);
+    submit(queue, &cmdBuffer, 1, nullptr, nullptr, 0, nullptr, 0, nullptr);
+  }
 
-		cmdBuffer->SetPipelineState(state);
-		cmdBuffer->BindStorageBuffer(storageBuffer, 0, 0, 0, sizeof(Particle) * particleCnt);
-		cmdBuffer->BindUniformBuffer(uniformBuffer, 0, 1, 0, sizeof(UBO));
-		cmdBuffer->Dispatch(particleCnt, 1, 1);
-		cmdBuffer->BufferBarrier({ UsageScope::StorageBuffer,
-								   UsageScope::TransferSrc,
-								   storageBuffer });
-		cmdBuffer->Copy(stagingBuffer, storageBuffer);
-		cmdBuffer->BufferBarrier({ UsageScope::TransferDst, UsageScope::Host, stagingBuffer });
+  while (true) {
+    ubo.dt = timer.getDt();
+    memcpy(uboData, &ubo, sizeof(ubo));
 
-		Timer perfTimer;
-		perfTimer.reset();
+    Queue queue;
+    CmdBuffer cmdBuffer;
+    pkGetQueue(device, QueueType::Compute, &queue);
+    pkCreateCmdBuffer(queue, &cmdBuffer);
 
-		Semaphore renderDone;
-		auto ticket = device->Submit(cmdBuffer, nullptr, UsageScope::None, nullptr);
+    setPipelineState(cmdBuffer, &state);
+    bindStorageBuffer(
+      cmdBuffer, storageBuffer, 0, 0, 0, sizeof(Particle) * particleCnt);
+    bindUniformBuffer(cmdBuffer, uniformBuffer, 0, 1, 0, sizeof(UBO));
+    dispatch(cmdBuffer, particleCnt, 1, 1);
 
-		device->Wait(ticket);
+    auto bufferBarrier =
+      BufferBarrier{ SynchronizationScope{ PipelineStageFlagBits::COMPUTE_BIT,
+                                           AccessFlagBits::SHADER_READ_BIT |
+                                             AccessFlagBits::SHADER_WRITE_BIT },
+                     SynchronizationScope{ PipelineStageFlagBits::TRANSFER_BIT,
+                                           AccessFlagBits::TRANSFER_READ_BIT },
+                     storageBuffer };
 
-		memcpy(particles, stagingBufferData, sizeof(Particle) * particleCnt);
+    insertBarrier(cmdBuffer, &bufferBarrier);
 
-		std::cout << "elapsed: " << perfTimer.getDt() << " | ";
-		std::cout << particles[particleCnt - 1].position.x << ", " << particles[particleCnt - 1].position.y
-			<< std::endl;
+    pkCopy(cmdBuffer, stagingBuffer, storageBuffer);
 
-		device->Recycle();
-	}
+    bufferBarrier =
+      BufferBarrier{ SynchronizationScope{ PipelineStageFlagBits::TRANSFER_BIT,
+                                           AccessFlagBits::TRANSFER_WRITE_BIT },
+                     SynchronizationScope{ PipelineStageFlagBits::HOST_BIT,
+                                           AccessFlagBits::HOST_READ_BIT },
+                     stagingBuffer };
+
+    insertBarrier(cmdBuffer, &bufferBarrier);
+
+    Timer perfTimer;
+    perfTimer.reset();
+
+    Fence fence;
+    submit(queue, &cmdBuffer, 1, nullptr, nullptr, 0, nullptr, 0, &fence);
+    wait(device, fence);
+
+    memcpy(particles, stagingBufferData, sizeof(Particle) * particleCnt);
+
+    std::cout << "elapsed: " << perfTimer.getDt() << " | ";
+    std::cout << particles[particleCnt - 1].position.x << ", "
+              << particles[particleCnt - 1].position.y << std::endl;
+
+    frame(device);
+  }
 }
