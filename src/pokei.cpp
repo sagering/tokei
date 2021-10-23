@@ -1710,6 +1710,21 @@ bindSampledTexture(CmdBuffer cmdBuffer,
 }
 
 void
+bindStorageTexture(CmdBuffer cmdBuffer,
+                   Texture texture,
+                   uint32_t set,
+                   uint32_t binding)
+{
+  auto cmdBufferInternal = (CmdBufferInternal*)cmdBuffer;
+  auto textureInternal = (TextureInternal*)texture;
+
+  auto& d = cmdBufferInternal->sets[set].bindings[binding];
+  d.imageInfo = vkiDescriptorImageInfo(
+    VK_NULL_HANDLE, textureInternal->view, VK_IMAGE_LAYOUT_GENERAL);
+  cmdBufferInternal->sets[set].dirty = true;
+}
+
+void
 flushDescriptorSets(CmdBufferInternal* cmdBufferInternal,
                     VkPipelineBindPoint bindPoint)
 {
@@ -1768,7 +1783,9 @@ flushDescriptorSets(CmdBufferInternal* cmdBufferInternal,
             break;
           }
           case VK_DESCRIPTOR_TYPE_SAMPLER:
-          case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE: {
+          case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+          case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+		  {
             writes[j].pImageInfo = &bindings[j].imageInfo;
             break;
           }
@@ -1819,6 +1836,38 @@ draw(CmdBuffer cmdBuffer, uint32_t cnt)
   auto cmdBufferInternal = (CmdBufferInternal*)cmdBuffer;
   flushDescriptorSets(cmdBufferInternal, VK_PIPELINE_BIND_POINT_GRAPHICS);
   vkCmdDraw(cmdBufferInternal->cmdBuffer, cnt, 1, 0, 0);
+}
+
+void pkBlit(CmdBuffer cmdBuffer, Texture dst, TextureLayout dstLayout, Texture src, TextureLayout srcLayout)
+{
+  auto cmdBufferInternal = (CmdBufferInternal*)cmdBuffer;
+  auto dstInternal = (TextureInternal*)dst;
+  auto srcInternal = (TextureInternal*)src;
+
+  VkImageBlit region;
+  region.dstOffsets[0].x = 0;
+  region.dstOffsets[0].y = 0;
+  region.dstOffsets[0].z = 0;
+  region.dstOffsets[1].x = dstInternal->desc.width;
+  region.dstOffsets[1].y = dstInternal->desc.height;
+  region.dstOffsets[1].z = dstInternal->desc.depth;
+  region.dstSubresource.aspectMask = dstInternal->subresource.aspectMask;
+  region.dstSubresource.baseArrayLayer = dstInternal->subresource.baseArrayLayer;
+  region.dstSubresource.layerCount = dstInternal->subresource.layerCount;
+  region.dstSubresource.mipLevel = dstInternal->subresource.baseMipLevel;
+
+  region.srcOffsets[0].x = 0;
+  region.srcOffsets[0].y = 0;
+  region.srcOffsets[0].z = 0;
+  region.srcOffsets[1].x = srcInternal->desc.width;
+  region.srcOffsets[1].y = srcInternal->desc.height;
+  region.srcOffsets[1].z = srcInternal->desc.depth;
+  region.srcSubresource.aspectMask = srcInternal->subresource.aspectMask;
+  region.srcSubresource.baseArrayLayer = srcInternal->subresource.baseArrayLayer;
+  region.srcSubresource.layerCount = srcInternal->subresource.layerCount;
+  region.srcSubresource.mipLevel = srcInternal->subresource.baseMipLevel;
+
+  vkCmdBlitImage(cmdBufferInternal->cmdBuffer, srcInternal->image, (VkImageLayout)srcLayout, dstInternal->image, (VkImageLayout)dstLayout, 1, &region, VK_FILTER_NEAREST);
 }
 
 void

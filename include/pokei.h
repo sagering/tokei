@@ -385,7 +385,7 @@ struct PipelineState
 {
 	struct BlendState
 	{
-		bool enable;
+		bool enable = false;
 		BlendOp colorOp;
 		BlendFactor srcColorFactor;
 		BlendFactor dstColorFactor;
@@ -396,8 +396,8 @@ struct PipelineState
 
 	struct DepthStencilState
 	{
-		bool depthTestenable;
-		bool depthWriteEnable;
+		bool depthTestenable = false;
+		bool depthWriteEnable = false;
 		CompareOp depthCompareOp;
 
 		struct FaceState
@@ -411,15 +411,15 @@ struct PipelineState
 			StencilOp depthFailOp;
 		};
 
-		bool stencilTestEnable;
+		bool stencilTestEnable = false;
 		FaceState front;
 		FaceState back;
 	} depthStencil;
 
 	struct InputAssemblyState
 	{
-		PrimitiveTopology topology;
-		bool primitiveRestartEnable;
+		PrimitiveTopology topology = PrimitiveTopology::TRIANGLE_LIST;
+		bool primitiveRestartEnable = false;;
 	} inputAssembly;
 
 	struct RasterizationState
@@ -431,9 +431,9 @@ struct PipelineState
 
 	struct ShaderState
 	{
-		char const* vertexShader;
-		char const* fragmentShader;
-		char const* computeShader;
+		char const* vertexShader = nullptr;
+		char const* fragmentShader = nullptr;
+		char const* computeShader = nullptr;
 	} shader;
 
 	struct VertexInputState
@@ -452,7 +452,7 @@ struct PipelineState
 		};
 
 		BindingDescription bindingDescriptions[MAX_NUM_VERTEX_BINDINGS];
-		uint32_t bindingDescriptionCnt;
+		uint32_t bindingDescriptionCnt = 0;;
 
 		struct AttributeDescription
 		{
@@ -463,7 +463,7 @@ struct PipelineState
 		};
 
 		AttributeDescription attributeDescriptions[MAX_NUM_VERTEX_BINDINGS];
-		uint32_t attributeDescriptionCnt;
+		uint32_t attributeDescriptionCnt = 0;
 	} vertexInput;
 
 	struct ViewportState
@@ -532,8 +532,8 @@ struct RenderPass
 	{
 		MAX_NUM_ATTACHMENTS = 8
 	};
-	AttachmentInfo attachmentInfos[MAX_NUM_ATTACHMENTS];
-	uint32_t attachmentCnt;
+	AttachmentInfo attachmentInfos[MAX_NUM_ATTACHMENTS] = {};
+	uint32_t attachmentCnt = 0;;
 };
 
 bool pkCreateDevice(Device*);
@@ -562,9 +562,12 @@ void bindIndexBuffer(CmdBuffer, Buffer);
 void setPipelineState(CmdBuffer, PipelineState const*);
 void bindUniformBuffer(CmdBuffer, Buffer, uint32_t set, uint32_t binding, uint32_t offset, uint32_t range);
 void bindStorageBuffer(CmdBuffer, Buffer, uint32_t set, uint32_t binding, uint32_t offset, uint32_t range);
+void bindStorageTexture(CmdBuffer, Texture, uint32_t set, uint32_t binding);
 void bindSampler(CmdBuffer, uint32_t set, uint32_t binding);
 void bindSampledTexture(CmdBuffer, Texture, uint32_t set, uint32_t binding);
 void draw(CmdBuffer, uint32_t cnt);
+// TODO: extend as needed
+void pkBlit(CmdBuffer, Texture dst, TextureLayout dstLayout, Texture src, TextureLayout srcLayout);
 void drawIndexed(CmdBuffer, uint32_t cnt);
 void endRenderPass(CmdBuffer);
 

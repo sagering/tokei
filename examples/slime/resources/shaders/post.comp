@@ -1,0 +1,43 @@
+#version 450
+
+layout (local_size_x_id = 0) in;
+
+layout(binding = 0, set = 0, rgba8) uniform image2D inTex;
+layout(binding = 1, set = 0, rgba8) uniform image2D outTex;
+
+layout (set = 0, binding = 2) uniform UBO 
+{
+	int numParticles;
+	int init;
+	float dt;
+	float moveSpeed;
+	float evapSpeed;
+	float diffuseSpeed;
+	float turnSpeed;
+};
+
+void main() 
+{
+	int width = 512;
+	int height = 512;
+	
+	ivec2 xy = ivec2(gl_GlobalInvocationID.xy);
+	
+	float orgVal = imageLoad(inTex, xy).x;
+	
+	float sum = 0.0;
+	for(int offsetX = -1; offsetX <= 1; ++offsetX) {
+	for(int offsetY = -1; offsetY <= 1; ++offsetY) {
+		int sampleX = xy.x + offsetX;
+		int sampleY = xy.y + offsetY;
+		
+		if(sampleX >= 0 && sampleX < width && sampleY >= 0 && sampleY < height) {
+			sum += imageLoad(inTex, ivec2(sampleX, sampleY)).x;
+		}
+	}
+	}
+	float diffuseWeight = clamp( diffuseSpeed * dt, 0.0, 1.0 );
+	float diffusedValue = mix(orgVal, sum / 9.0, diffuseSpeed * dt);
+	float val = max(0, diffusedValue - evapSpeed * dt);
+	imageStore(outTex, xy, vec4(val));
+}
