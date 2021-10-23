@@ -1,15 +1,17 @@
 # tokei
-An experimental render engine based on Vulkan.
 
-![pbr screenshot](pbr_screenshot.JPG)
+A user friendly abstraction layer on top of Vulkan.
+
+![slime_screenshot](slime.JPG)
 
 ## features
 
-1. simple GPU - GPU synchronization
-2. implicit image layout transitions
-3. handles memory allocation through [VMA](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator)
-4. descriptor set and pipeline layouts are read from the shaders using [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross) reflection features
-5. buffers and textures are bound to set and binding slots; no explicit descriptor set management is required
+1. Exposes "virtual" graphics, transfer and compute queue. 
+2. Simplified buffer and texture creation.
+3. No explicit descriptor set management is required.
+4. Shader reflection for automatic pipeline layout extraction using [SPIRV-Cross](https://github.com/KhronosGroup/SPIRV-Cross).
+5. Simplified pipeline setup.
+6. Simplified memory management backed by [VMA](https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator).
 
 ## examples
 
@@ -33,7 +35,9 @@ Performs particle movement calculations in a compute shader and reads back the r
 
 Showcases the use of dynamic uniform buffer offsets to effeciently set uniform data on multiple objects using a single buffer.
 
-<img src="multiple_objects_screenshot.JPG" width="400">
+### [slime](https://github.com/sagering/tokei/tree/main/examples/slime)
+
+Slime simulation using compute shader, storage images and buffers inspired by [Sebastion Lagues Slime-Simulation](https://github.com/SebLague/Slime-Simulation).
 
 ## build
 
@@ -41,7 +45,4 @@ This library has only been tested on Windows 10 so far. It is not expected to wo
 
 ## todos
 
-1. proper handling of CPU - GPU synchronization
-2. multithreading support
-3. multi queue support
-4. and more
+Multi thread support and more.
