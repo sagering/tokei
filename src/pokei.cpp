@@ -876,6 +876,8 @@ uint32_t getQueueIdx(DeviceInternal *dev, QueueType type)
     return dev->computeQueueIdx;
   case Transfer:
     return dev->transferQueueIdx;
+  default:
+    return dev->graphicsQueueIdx;
   }
 }
 

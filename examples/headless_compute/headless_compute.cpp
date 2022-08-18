@@ -53,7 +53,7 @@ void initParticles()
 struct Timer
 {
   void reset() { startTime = now(); }
-  float getDt() { return now() - startTime; }
+  double getDt() { return now() - startTime; }
 
   double now()
   {
@@ -62,7 +62,7 @@ struct Timer
         .count();
   }
 
-  double startTime = 0.f;
+  double startTime = 0.0;
 };
 
 int main()
@@ -129,7 +129,7 @@ int main()
 
   while (true)
   {
-    ubo.dt = timer.getDt();
+    ubo.dt = static_cast<float>(timer.getDt());
     memcpy(uboData, &ubo, sizeof(ubo));
 
     Queue queue;

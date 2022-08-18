@@ -383,7 +383,7 @@ PipelineLayout createPipelineLayout(ShaderLayout *shaderLayouts,
 {
   PipelineLayout ret = {};
 
-  for (auto i = 0; i < cnt; ++i)
+  for (uint32_t i = 0; i < cnt; ++i)
   {
     for (uint32_t bindingIdx = 0; bindingIdx < shaderLayouts[i].bindingCnt;
          ++bindingIdx)
@@ -424,7 +424,7 @@ VkPipeline createGraphicsPipeline(VkDevice device,
   // shader
   VkPipelineShaderStageCreateInfo shaderStageCreateInfos[2];
 
-  for (auto i = 0; i < shaderModuleCnt; ++i)
+  for (uint32_t i = 0; i < shaderModuleCnt; ++i)
   {
     shaderStageCreateInfos[i] = vkiPipelineShaderStageCreateInfo(
         stageFlags[i], shaderModules[i], "main", nullptr);
