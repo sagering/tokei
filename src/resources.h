@@ -39,10 +39,10 @@ struct RenderPassInternal
     VkAttachmentReference colorAttachments[MAX_NUM_SUBPASS_COLOR_ATTACHMENTS];
     uint32_t colorAttachmentCnt;
     VkAttachmentReference
-      resolveAttachments[MAX_NUM_SUBPASS_RESOLVE_ATTACHMENTS];
+        resolveAttachments[MAX_NUM_SUBPASS_RESOLVE_ATTACHMENTS];
     uint32_t resolveAttachmentCnt;
     VkAttachmentReference
-      depthStencilAttachments[MAX_NUM_SUBPASS_DEPTH_STENCIL_ATTACHMENTS];
+        depthStencilAttachments[MAX_NUM_SUBPASS_DEPTH_STENCIL_ATTACHMENTS];
     uint32_t depthStencilAttachmentCnt;
   };
 
@@ -81,8 +81,8 @@ struct ShaderLayout
     VkDescriptorSetLayoutBinding binding = {};
   };
 
-  DescriptorSetLayoutBinding
-    bindings[MAX_NUM_DESCRIPTOR_SET_LAYOUT_BINDINGS] = {};
+  DescriptorSetLayoutBinding bindings[MAX_NUM_DESCRIPTOR_SET_LAYOUT_BINDINGS] =
+      {};
   uint32_t bindingCnt = 0;
 
   VkPushConstantRange pushConstantRanges[MAX_NUM_PUSH_CONSTANT_RANGES] = {};
@@ -106,122 +106,114 @@ struct PipelineLayout
 
 struct GraphicsPipelineState
 {
-	struct BlendState
-	{
-		bool enable;
-		VkBlendOp colorOp;
-		VkBlendFactor srcColorFactor;
-		VkBlendFactor dstColorFactor;
-		VkBlendOp alphaOp;
-		VkBlendFactor srcAlphaFactor;
-		VkBlendFactor dstAlphaFactor;
-	} blend;
+  struct BlendState
+  {
+    bool enable;
+    VkBlendOp colorOp;
+    VkBlendFactor srcColorFactor;
+    VkBlendFactor dstColorFactor;
+    VkBlendOp alphaOp;
+    VkBlendFactor srcAlphaFactor;
+    VkBlendFactor dstAlphaFactor;
+  } blend;
 
-	struct DepthStencilState
-	{
-		bool depthTestenable;
-		bool depthWriteEnable;
-		VkCompareOp depthCompareOp;
+  struct DepthStencilState
+  {
+    bool depthTestenable;
+    bool depthWriteEnable;
+    VkCompareOp depthCompareOp;
 
-		bool stencilTestEnable;
-		VkStencilOpState front;
-		VkStencilOpState back;
-	} depthStencil;
+    bool stencilTestEnable;
+    VkStencilOpState front;
+    VkStencilOpState back;
+  } depthStencil;
 
-	struct InputAssemblyState
-	{
-		VkPrimitiveTopology topology;
-		bool primitiveRestartEnable;
-	} inputAssembly;
+  struct InputAssemblyState
+  {
+    VkPrimitiveTopology topology;
+    bool primitiveRestartEnable;
+  } inputAssembly;
 
-	struct RasterizationState
-	{
-		VkPolygonMode polygonMode;
-		VkCullModeFlags cullMode;
-		VkFrontFace frontFace;
-	} rasterization;
+  struct RasterizationState
+  {
+    VkPolygonMode polygonMode;
+    VkCullModeFlags cullMode;
+    VkFrontFace frontFace;
+  } rasterization;
 
-	struct VertexInputState
-	{
-		enum
-		{
-			MAX_NUM_VERTEX_BINDINGS = 2,
-			MAX_NUM_VERTEX_ATTRIBUTES = 8
-		};
+  struct VertexInputState
+  {
+    enum
+    {
+      MAX_NUM_VERTEX_BINDINGS = 2,
+      MAX_NUM_VERTEX_ATTRIBUTES = 8
+    };
 
-		struct BindingDescription
-		{
-			uint32_t binding;
-			uint32_t stride;
-			VkVertexInputRate inputRate;
-		};
+    struct BindingDescription
+    {
+      uint32_t binding;
+      uint32_t stride;
+      VkVertexInputRate inputRate;
+    };
 
-		BindingDescription bindingDescriptions[MAX_NUM_VERTEX_BINDINGS];
-		uint32_t bindingDescriptionCnt;
+    BindingDescription bindingDescriptions[MAX_NUM_VERTEX_BINDINGS];
+    uint32_t bindingDescriptionCnt;
 
-		struct AttributeDescription
-		{
-			uint32_t location;
-			uint32_t binding;
-			VkFormat format;
-			uint32_t offset;
-		};
+    struct AttributeDescription
+    {
+      uint32_t location;
+      uint32_t binding;
+      VkFormat format;
+      uint32_t offset;
+    };
 
-		AttributeDescription attributeDescriptions[MAX_NUM_VERTEX_BINDINGS];
-		uint32_t attributeDescriptionCnt;
-	} vertexInput;
+    AttributeDescription attributeDescriptions[MAX_NUM_VERTEX_BINDINGS];
+    uint32_t attributeDescriptionCnt;
+  } vertexInput;
 
-	struct ViewportState
-	{
-		VkViewport viewport;
-		VkRect2D scissors;
-	} viewport;
+  struct ViewportState
+  {
+    VkViewport viewport;
+    VkRect2D scissors;
+  } viewport;
 
-	struct MultisampleState
-	{
-		VkSampleCountFlagBits rasterizationSamples;
-	} multisample;
+  struct MultisampleState
+  {
+    VkSampleCountFlagBits rasterizationSamples;
+  } multisample;
 };
 
-VkRenderPass
-createRenderPass(VkDevice, RenderPassInternal const*);
+VkRenderPass createRenderPass(VkDevice, RenderPassInternal const *);
 
-VkFramebuffer
-createFramebuffer(VkDevice, Framebuffer const*);
+VkFramebuffer createFramebuffer(VkDevice, Framebuffer const *);
 
-VkDescriptorSetLayout
-createDescriptorSetLayout(VkDevice, DescriptorSetLayout const*);
+VkDescriptorSetLayout createDescriptorSetLayout(VkDevice,
+                                                DescriptorSetLayout const *);
 
-ShaderLayout
-createShaderLayout(char const* filepath);
+ShaderLayout createShaderLayout(char const *filepath);
 
-PipelineLayout
-createPipelineLayout(ShaderLayout *, VkShaderStageFlagBits const*, uint32_t cnt);
+PipelineLayout createPipelineLayout(ShaderLayout *,
+                                    VkShaderStageFlagBits const *,
+                                    uint32_t cnt);
 
-VkPipelineLayout
-createPipelineLayout(VkDevice, PipelineLayout const*);
+VkPipelineLayout createPipelineLayout(VkDevice, PipelineLayout const *);
 
-VkShaderModule
-createShaderModule(VkDevice, char const* filepath);
+VkShaderModule createShaderModule(VkDevice, char const *filepath);
 
-VkPipeline
-createComputePipeline(VkDevice, VkShaderModule, VkPipelineLayout);
+VkPipeline createComputePipeline(VkDevice, VkShaderModule, VkPipelineLayout);
 
-VkPipeline
-createGraphicsPipeline(VkDevice, VkShaderModule*, VkShaderStageFlagBits*, uint32_t shaderModuleCnt, VkPipelineLayout, GraphicsPipelineState const*, VkRenderPass, uint32_t subpass);
+VkPipeline createGraphicsPipeline(VkDevice, VkShaderModule *,
+                                  VkShaderStageFlagBits *,
+                                  uint32_t shaderModuleCnt, VkPipelineLayout,
+                                  GraphicsPipelineState const *, VkRenderPass,
+                                  uint32_t subpass);
 
-VkSampler
-createSampler(VkDevice);
+VkSampler createSampler(VkDevice);
 
-VkRenderPass
-createRenderPass(VkDevice, RenderPassInternal const*);
+VkRenderPass createRenderPass(VkDevice, RenderPassInternal const *);
 
-VkEvent
-createEvent(VkDevice);
+VkEvent createEvent(VkDevice);
 
-VkSemaphore
-createSemaphore(VkDevice);
+VkSemaphore createSemaphore(VkDevice);
 
-VkFence
-createFence(VkDevice);
-
+VkFence createFence(VkDevice);

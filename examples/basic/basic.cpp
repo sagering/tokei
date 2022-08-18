@@ -14,8 +14,8 @@ double
 nowd()
 {
   return std::chrono::duration_cast<std::chrono::duration<double>>(
-           std::chrono::steady_clock::now().time_since_epoch())
-    .count();
+             std::chrono::steady_clock::now().time_since_epoch())
+      .count();
 }
 
 struct Time
@@ -24,13 +24,12 @@ struct Time
 };
 
 double
-elapsed(Time* t)
+elapsed(Time *t)
 {
   return nowd() - t->start;
 }
 
-void
-reset(Time* t)
+void reset(Time *t)
 {
   t->start = nowd();
 }
@@ -41,26 +40,27 @@ struct Fps
   uint32_t fps = 0;
 };
 
-void
-fps_update(Fps* fps)
+void fps_update(Fps *fps)
 {
   auto now = nowd();
 
-  if (now - fps->start >= 1.0) {
+  if (now - fps->start >= 1.0)
+  {
     std::cout << "FPS: " << fps->fps << std::endl;
     fps->fps = 0;
     fps->start = now;
-  } else {
+  }
+  else
+  {
     fps->fps += 1;
   }
 }
 
-std::vector<float> const vertices = { 1.0f, 0.0f,  0.0f, 0.0f,  1.0f, 0.0f,
-                                      0.0f, 0.0f,  0.0f, -1.0f, 0.0f, 0.0f,
-                                      0.0f, -1.0f, 0.0f, 0.0f,  0.0f, 0.0f };
+std::vector<float> const vertices = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+                                     0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
+                                     0.0f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 
-int
-main()
+int main()
 {
   glfwInit();
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -74,7 +74,7 @@ main()
   Device device;
   pkCreateDevice(&device);
 
-  void* data;
+  void *data;
   Buffer stagingBuffer;
   BufferCreateInfo bufferCreateInfo;
   bufferCreateInfo.size = vertices.size() * sizeof(float);
@@ -87,7 +87,7 @@ main()
   bufferCreateInfo.usageFlags = BufferUsageFlagBits::BUF_TRANSFER_DST |
                                 BufferUsageFlagBits::BUF_VERTEX_BUFFER;
   bufferCreateInfo.memoryUsage = MemoryUsage::GPU_ONLY;
-  void* dummy;
+  void *dummy;
   pkCreateBuffer(device, &bufferCreateInfo, &vertexBuffer, &dummy);
 
   SwapchainCreateInfo swapchainCreateInfo = {};
@@ -97,8 +97,7 @@ main()
   swapchainCreateInfo.format = PixelFormat::RGBA8_UNORM_SRGB;
   swapchainCreateInfo.usageFlags = TextureUsageFlagBits::TEX_COLOR_ATTACHMENT;
   swapchainCreateInfo.textureCnt = 3;
-  swapchainCreateInfo.platformHandle = (void*)hwnd;
-  swapchainCreateInfo.oldSwapchain = nullptr;
+  swapchainCreateInfo.platformHandle = (void *)hwnd;
 
   Swapchain swapchain;
   pkCreateSwapchain(device, &swapchainCreateInfo, &swapchain);
@@ -127,7 +126,7 @@ main()
   state.viewport.viewport.y = 0;
   state.viewport.viewport.width = static_cast<float>(swapchainCreateInfo.width);
   state.viewport.viewport.height =
-    static_cast<float>(swapchainCreateInfo.height);
+      static_cast<float>(swapchainCreateInfo.height);
   state.viewport.viewport.minDepth = 0.f;
   state.viewport.viewport.maxDepth = 1.f;
   state.viewport.scissors.x = 0;
@@ -143,7 +142,7 @@ main()
   textureCreateInfo.layers = 1;
   textureCreateInfo.mipLevels = 1;
   textureCreateInfo.usageFlags =
-    TextureUsageFlagBits::TEX_SAMPLED | TextureUsageFlagBits::TEX_TRANSFER_DST;
+      TextureUsageFlagBits::TEX_SAMPLED | TextureUsageFlagBits::TEX_TRANSFER_DST;
 
   Texture sampledTexture;
   pkCreateTexture(device, &textureCreateInfo, &sampledTexture);
@@ -165,9 +164,11 @@ main()
 
   Fps fps;
 
-  while (true) {
+  while (true)
+  {
     auto dt = elapsed(&t);
-    if (dt > 0.1) {
+    if (dt > 0.1)
+    {
       color.g += dg;
       color.b += db;
       color.a = 255;
@@ -175,7 +176,7 @@ main()
     }
 
     Buffer uniformBuffer;
-    void* data;
+    void *data;
     bufferCreateInfo.size = 10 * 10 * 4;
     bufferCreateInfo.usageFlags = BufferUsageFlagBits::BUF_UNIFORM_BUFFER |
                                   BufferUsageFlagBits::BUF_TRANSFER_SRC;
@@ -187,9 +188,8 @@ main()
     Texture swapchainTexture;
     Semaphore available;
 
-    if (!acquireNext(device, swapchain, &swapchainTexture, &available)) {
-      pkDestroySwapchain(device, swapchain);
-
+    while (!acquireNext(device, swapchain, &swapchainTexture, &available))
+    {
       glfwGetWindowSize(window, &width, &height);
       state.viewport.scissors.width = width;
       state.viewport.scissors.height = height;
@@ -198,9 +198,8 @@ main()
 
       swapchainCreateInfo.width = width;
       swapchainCreateInfo.height = height;
-      swapchainCreateInfo.oldSwapchain = swapchain;
 
-      pkCreateSwapchain(device, &swapchainCreateInfo, &swapchain);
+      pkRecreateSwapchain(device, &swapchainCreateInfo, swapchain);
     }
 
     Queue queue;
@@ -210,68 +209,63 @@ main()
     pkCreateCmdBuffer(queue, &cmdBuffer);
 
     auto bufferBarrier = BufferBarrier{
-      SynchronizationScope{ PipelineStageFlagBits::TOP_OF_PIPE_BIT, 0 },
-      SynchronizationScope{ PipelineStageFlagBits::TRANSFER_BIT,
-                            AccessFlagBits::TRANSFER_WRITE_BIT },
-      vertexBuffer
-    };
+        SynchronizationScope{PipelineStageFlagBits::TOP_OF_PIPE_BIT, 0},
+        SynchronizationScope{PipelineStageFlagBits::TRANSFER_BIT,
+                             AccessFlagBits::TRANSFER_WRITE_BIT},
+        vertexBuffer};
 
     insertBarrier(cmdBuffer, &bufferBarrier);
 
     pkCopy(cmdBuffer, vertexBuffer, stagingBuffer);
 
     auto textureBarrier = TextureBarrier{
-      SynchronizationScope{ PipelineStageFlagBits::TOP_OF_PIPE_BIT, 0 },
-      SynchronizationScope{ PipelineStageFlagBits::TRANSFER_BIT,
-                            AccessFlagBits::TRANSFER_WRITE_BIT },
-      TextureLayout::UNDEFINED,
-      TextureLayout::TRANSFER_DST_OPTIMAL,
-      sampledTexture
-    };
+        SynchronizationScope{PipelineStageFlagBits::TOP_OF_PIPE_BIT, 0},
+        SynchronizationScope{PipelineStageFlagBits::TRANSFER_BIT,
+                             AccessFlagBits::TRANSFER_WRITE_BIT},
+        TextureLayout::UNDEFINED,
+        TextureLayout::TRANSFER_DST_OPTIMAL,
+        sampledTexture};
 
     insertBarrier(cmdBuffer, &textureBarrier);
 
     pkCopyBufferToTexture(cmdBuffer, sampledTexture, uniformBuffer);
 
     bufferBarrier = BufferBarrier{
-      SynchronizationScope{ PipelineStageFlagBits::TRANSFER_BIT,
-                            AccessFlagBits::TRANSFER_WRITE_BIT },
-      SynchronizationScope{ PipelineStageFlagBits::GRAPHICS_VERTEX_SHADER_BIT |
-                              PipelineStageFlagBits::GRAPHICS_VERTEX_INPUT_BIT,
-                            AccessFlagBits::VERTEX_ATTRIBUTE_READ_BIT },
-      vertexBuffer
-    };
+        SynchronizationScope{PipelineStageFlagBits::TRANSFER_BIT,
+                             AccessFlagBits::TRANSFER_WRITE_BIT},
+        SynchronizationScope{PipelineStageFlagBits::GRAPHICS_VERTEX_SHADER_BIT |
+                                 PipelineStageFlagBits::GRAPHICS_VERTEX_INPUT_BIT,
+                             AccessFlagBits::VERTEX_ATTRIBUTE_READ_BIT},
+        vertexBuffer};
 
     insertBarrier(cmdBuffer, &bufferBarrier);
 
     textureBarrier = TextureBarrier{
-      SynchronizationScope{ PipelineStageFlagBits::TRANSFER_BIT,
-                            AccessFlagBits::TRANSFER_WRITE_BIT },
-      SynchronizationScope{ PipelineStageFlagBits::GRAPHICS_FRAGMENT_SHADER_BIT,
-                            AccessFlagBits::SHADER_READ_BIT },
-      TextureLayout::TRANSFER_DST_OPTIMAL,
-      TextureLayout::SHADER_READ_ONLY_OPTIMAL,
-      sampledTexture
-    };
+        SynchronizationScope{PipelineStageFlagBits::TRANSFER_BIT,
+                             AccessFlagBits::TRANSFER_WRITE_BIT},
+        SynchronizationScope{PipelineStageFlagBits::GRAPHICS_FRAGMENT_SHADER_BIT,
+                             AccessFlagBits::SHADER_READ_BIT},
+        TextureLayout::TRANSFER_DST_OPTIMAL,
+        TextureLayout::SHADER_READ_ONLY_OPTIMAL,
+        sampledTexture};
 
     insertBarrier(cmdBuffer, &textureBarrier);
 
     textureBarrier = TextureBarrier{
-      SynchronizationScope{ PipelineStageFlagBits::TOP_OF_PIPE_BIT, 0 },
-      SynchronizationScope{
-        PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
-        AccessFlagBits::COLOR_ATTACHMENT_READ_BIT |
-          AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT },
-      TextureLayout::UNDEFINED,
-      TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
-      swapchainTexture
-    };
+        SynchronizationScope{PipelineStageFlagBits::TOP_OF_PIPE_BIT, 0},
+        SynchronizationScope{
+            PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
+            AccessFlagBits::COLOR_ATTACHMENT_READ_BIT |
+                AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT},
+        TextureLayout::UNDEFINED,
+        TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
+        swapchainTexture};
 
     insertBarrier(cmdBuffer, &textureBarrier);
 
     RenderPass renderPass = {};
     renderPass.attachmentCnt = 1;
-    renderPass.attachmentInfos[0].clearValue = { 1., 0., 0., 1 };
+    renderPass.attachmentInfos[0].clearValue = {1., 0., 0., 1};
     renderPass.attachmentInfos[0].texture = swapchainTexture;
     renderPass.attachmentInfos[0].type = AttachmentType::COLOR;
     renderPass.attachmentInfos[0].loadOp = LoadOp::CLEAR;
@@ -289,15 +283,14 @@ main()
     endRenderPass(cmdBuffer);
 
     textureBarrier = TextureBarrier{
-      SynchronizationScope{
-        PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
-        AccessFlagBits::COLOR_ATTACHMENT_READ_BIT |
-          AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT },
-      SynchronizationScope{ PipelineStageFlagBits::BOTTOM_OF_PIPE_BIT, 0 },
-      TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
-      TextureLayout::PRESENT_SRC_KHR,
-      swapchainTexture
-    };
+        SynchronizationScope{
+            PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
+            AccessFlagBits::COLOR_ATTACHMENT_READ_BIT |
+                AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT},
+        SynchronizationScope{PipelineStageFlagBits::BOTTOM_OF_PIPE_BIT, 0},
+        TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
+        TextureLayout::PRESENT_SRC_KHR,
+        swapchainTexture};
 
     insertBarrier(cmdBuffer, &textureBarrier);
 
@@ -318,9 +311,8 @@ main()
            1,
            nullptr);
 
-    if (!present(queue, swapchain, &renderDone)) {
-      pkDestroySwapchain(device, swapchain);
-
+    if (!present(queue, swapchain, &renderDone))
+    {
       glfwGetWindowSize(window, &width, &height);
       state.viewport.scissors.width = width;
       state.viewport.scissors.height = height;
@@ -329,9 +321,10 @@ main()
 
       swapchainCreateInfo.width = width;
       swapchainCreateInfo.height = height;
-      swapchainCreateInfo.oldSwapchain = swapchain;
 
-      pkCreateSwapchain(device, &swapchainCreateInfo, &swapchain);
+      pkRecreateSwapchain(device, &swapchainCreateInfo, swapchain);
+
+      // Do not try to present again because we didn't render into new swapchain textures.
     }
 
     pkDestroyBuffer(device, uniformBuffer);

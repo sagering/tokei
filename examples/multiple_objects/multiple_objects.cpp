@@ -45,8 +45,7 @@ struct Object
 
 std::vector<Object> objects;
 
-float
-getRand()
+float getRand()
 {
   return rand() / (float)RAND_MAX;
 }
@@ -55,46 +54,44 @@ BufferBarrier
 indexBufferTransferToGraphics(Buffer buffer)
 {
   return BufferBarrier{
-    SynchronizationScope{ PipelineStageFlagBits::TRANSFER_BIT,
-                          AccessFlagBits::TRANSFER_WRITE_BIT,
-                          QueueType::Transfer },
-    SynchronizationScope{ PipelineStageFlagBits::GRAPHICS_VERTEX_INPUT_BIT |
-                            PipelineStageFlagBits::GRAPHICS_VERTEX_SHADER_BIT,
-                          AccessFlagBits::INDEX_READ_BIT,
-                          QueueType::Graphics },
-    buffer
-  };
+      SynchronizationScope{PipelineStageFlagBits::TRANSFER_BIT,
+                           AccessFlagBits::TRANSFER_WRITE_BIT,
+                           QueueType::Transfer},
+      SynchronizationScope{PipelineStageFlagBits::GRAPHICS_VERTEX_INPUT_BIT |
+                               PipelineStageFlagBits::GRAPHICS_VERTEX_SHADER_BIT,
+                           AccessFlagBits::INDEX_READ_BIT,
+                           QueueType::Graphics},
+      buffer};
 }
 
 BufferBarrier
 vertexBufferTransferToGraphics(Buffer buffer)
 {
   return BufferBarrier{
-    SynchronizationScope{ PipelineStageFlagBits::TRANSFER_BIT,
-                          AccessFlagBits::TRANSFER_WRITE_BIT,
-                          QueueType::Transfer },
-    SynchronizationScope{ PipelineStageFlagBits::GRAPHICS_VERTEX_INPUT_BIT |
-                            PipelineStageFlagBits::GRAPHICS_VERTEX_SHADER_BIT,
-                          AccessFlagBits::VERTEX_ATTRIBUTE_READ_BIT,
-                          QueueType::Graphics },
-    buffer
-  };
+      SynchronizationScope{PipelineStageFlagBits::TRANSFER_BIT,
+                           AccessFlagBits::TRANSFER_WRITE_BIT,
+                           QueueType::Transfer},
+      SynchronizationScope{PipelineStageFlagBits::GRAPHICS_VERTEX_INPUT_BIT |
+                               PipelineStageFlagBits::GRAPHICS_VERTEX_SHADER_BIT,
+                           AccessFlagBits::VERTEX_ATTRIBUTE_READ_BIT,
+                           QueueType::Graphics},
+      buffer};
 }
 
-Mesh
-uploadSuzanne(Device device, CmdBuffer cmdBuffer)
+Mesh uploadSuzanne(Device device, CmdBuffer cmdBuffer)
 {
-  fastObjMesh* mesh = fast_obj_read("resources/meshes/suzanne.obj");
+  fastObjMesh *mesh = fast_obj_read("resources/meshes/suzanne.obj");
   uint32_t vbuf_size = sizeof(float) * 3 * mesh->position_count;
   uint32_t ibuf_size = 3 * mesh->face_count * sizeof(uint32_t);
 
-  Mesh result = { 0, 0, mesh->face_count };
+  Mesh result = {0, 0, mesh->face_count};
 
   {
     // asserting that all facse are triangles
     auto idxCnt = 0;
 
-    for (unsigned int i = 0; i < mesh->face_count; ++i) {
+    for (unsigned int i = 0; i < mesh->face_count; ++i)
+    {
       idxCnt += 3 * (mesh->face_vertices[i] - 2);
     }
 
@@ -102,7 +99,7 @@ uploadSuzanne(Device device, CmdBuffer cmdBuffer)
   }
 
   { // vertices
-    void* data;
+    void *data;
     Buffer stagingBuffer;
     BufferCreateInfo bufferCreateInfo;
     bufferCreateInfo.size = vbuf_size;
@@ -125,11 +122,12 @@ uploadSuzanne(Device device, CmdBuffer cmdBuffer)
     std::vector<uint32_t> positionIndices;
     positionIndices.reserve(mesh->face_count * 3);
 
-    for (uint32_t i = 0; i < mesh->face_count * 3; ++i) {
+    for (uint32_t i = 0; i < mesh->face_count * 3; ++i)
+    {
       positionIndices.push_back(mesh->indices[i].p);
     }
 
-    void* data;
+    void *data;
     Buffer stagingBuffer;
     BufferCreateInfo bufferCreateInfo;
     bufferCreateInfo.size = ibuf_size;
@@ -178,7 +176,7 @@ getMaterial(uint32_t viewportWidth, uint32_t viewportHeight, uint32_t samples)
 
   state.inputAssembly.topology = PrimitiveTopology::TRIANGLE_LIST;
 
-  state.rasterization.polygonMode = PolygonMode::FILL;
+  state.rasterization.polygonMode = PolygonMode::LINE;
   state.rasterization.cullMode = CullMode::NONE;
   state.rasterization.frontFace = FrontFace::CLOCKWISE;
 
@@ -199,21 +197,20 @@ getMaterial(uint32_t viewportWidth, uint32_t viewportHeight, uint32_t samples)
   state.depthStencil.depthTestenable = true;
   state.depthStencil.depthCompareOp = CompareOp::LESS;
 
-  return { state };
+  return {state};
 }
 
-void
-addRandomObject(Device device,
-                CmdBuffer cmdBuffer,
-                uint32_t viewportWidth,
-                uint32_t viewportHeight,
-                uint32_t samples)
+void addRandomObject(Device device,
+                     CmdBuffer cmdBuffer,
+                     uint32_t viewportWidth,
+                     uint32_t viewportHeight,
+                     uint32_t samples)
 {
   Object object = {};
   object.mesh = uploadSuzanne(device, cmdBuffer);
   object.material = getMaterial(viewportWidth, viewportHeight, samples);
 
-  float scale = 0.2 * getRand() + 0.1;
+  float scale = 0.2f * getRand() + 0.1f;
   float x = 1.f - 2.f * getRand();
   float y = 1.f - 2.f * getRand();
 
@@ -222,16 +219,15 @@ addRandomObject(Device device,
   object.mvp.model = glm::identity<glm::mat4>();
 
   object.mvp.model =
-    glm::translate(object.mvp.model, glm::vec3{ x, y, 0.5f }); // move closer
+      glm::translate(object.mvp.model, glm::vec3{x, y, 0.5f}); // move closer
   object.mvp.model = glm::scale(
-    object.mvp.model, glm::vec3{ scale, -scale, 0.5 }); // scale down, flip y
+      object.mvp.model, glm::vec3{scale, -scale, 0.5}); // scale down, flip y
 
   object.rotationSpeed = getRand();
   objects.push_back(object);
 }
 
-int
-main()
+int main()
 {
   srand(time(NULL));
 
@@ -258,8 +254,7 @@ main()
   swapchainCreateInfo.format = PixelFormat::RGBA8_UNORM_SRGB;
   swapchainCreateInfo.usageFlags = TextureUsageFlagBits::TEX_COLOR_ATTACHMENT;
   swapchainCreateInfo.textureCnt = 3;
-  swapchainCreateInfo.platformHandle = (void*)hwnd;
-  swapchainCreateInfo.oldSwapchain = nullptr;
+  swapchainCreateInfo.platformHandle = (void *)hwnd;
 
   Swapchain swapchain;
   pkCreateSwapchain(device, &swapchainCreateInfo, &swapchain);
@@ -272,18 +267,19 @@ main()
   textureCreateInfo.mipLevels = 1;
   textureCreateInfo.layers = 1;
   textureCreateInfo.usageFlags =
-    TextureUsageFlagBits::TEX_DEPTH_STENCIL_ATTACHMENT;
+      TextureUsageFlagBits::TEX_DEPTH_STENCIL_ATTACHMENT;
 
   Texture depthTexture;
   pkCreateTexture(device, &textureCreateInfo, &depthTexture);
 
+  uint32_t const OBJ_DATA_SIZE = 1024;
   struct Uniforms
   {
-    uint32_t const UBO_BUFFER_SIZE = 1024 * 100;
+    uint32_t const UBO_BUFFER_SIZE = OBJ_DATA_SIZE * 100;
     uint32_t const NUM_UBOS = 3;
 
     Buffer buffer;
-    void* data;
+    void *data;
 
     uint32_t cur = 0;
     Fence fences[3] = {};
@@ -291,11 +287,10 @@ main()
     void Init(Device device)
     {
       BufferCreateInfo bufferCreateInfo = {
-        UBO_BUFFER_SIZE * NUM_UBOS,
-        BufferUsageFlagBits::BUF_UNIFORM_BUFFER |
-          BufferUsageFlagBits::BUF_TRANSFER_SRC,
-        MemoryUsage::CPU_TO_GPU
-      };
+          UBO_BUFFER_SIZE * NUM_UBOS,
+          BufferUsageFlagBits::BUF_UNIFORM_BUFFER |
+              BufferUsageFlagBits::BUF_TRANSFER_SRC,
+          MemoryUsage::CPU_TO_GPU};
 
       pkCreateBuffer(device, &bufferCreateInfo, &buffer, &data);
     }
@@ -321,15 +316,49 @@ main()
   bool uploadDone = false;
   bool initDone = false;
 
-  while (true) {
+  Queue graphicsQueue;
+  Queue transferQueue;
+  pkGetQueue(device, QueueType::Graphics, &graphicsQueue);
+  pkGetQueue(device, QueueType::Transfer, &transferQueue);
+
+  Semaphore transferDone = 0;
+  if (!uploadDone)
+  {
+    uploadDone = true;
+
+    CmdBuffer cmdBuffer;
+    pkCreateCmdBuffer(transferQueue, &cmdBuffer);
+
+    for (int i = 0; i < 10; ++i)
+    {
+      addRandomObject(device, cmdBuffer, width, height, samples);
+    }
+    Fence fence;
+
+    submit(transferQueue,
+           &cmdBuffer,
+           1,
+           nullptr,
+           nullptr,
+           0,
+           &transferDone,
+           1,
+           &fence);
+
+    debugWait(device);
+  }
+
+  while (true)
+  {
     auto offset = uniforms.GetNextOfset(device);
 
     uint32_t objIdx = 0;
-    for (auto& obj : objects) {
+    for (auto &obj : objects)
+    {
       obj.mvp.model = glm::rotate(
-        obj.mvp.model, obj.rotationSpeed * 0.02f, glm::vec3{ 0, 1, 0 });
-      memcpy(static_cast<uint8_t*>(uniforms.data) + offset +
-               objIdx * sizeof(obj.mvp),
+          obj.mvp.model, obj.rotationSpeed * 0.02f, glm::vec3{0, 1, 0});
+      memcpy(static_cast<uint8_t *>(uniforms.data) + offset +
+                 objIdx * OBJ_DATA_SIZE,
              &obj.mvp,
              sizeof(obj.mvp));
       ++objIdx;
@@ -338,50 +367,38 @@ main()
     Texture swapchainTexture;
     Semaphore available;
 
-    acquireNext(device, swapchain, &swapchainTexture, &available);
+    while (!acquireNext(device, swapchain, &swapchainTexture, &available))
+    {
+      glfwGetWindowSize(window, &width, &height);
 
-    Semaphore transferDone = 0;
-    if (!uploadDone) {
-      // uploadDone = true;
-
-      for (auto& obj : objects) {
-        pkDestroyBuffer(device, obj.mesh.ibuf);
-        pkDestroyBuffer(device, obj.mesh.vbuf);
+      for (auto &obj : objects)
+      {
+        obj.material = getMaterial(width, height, samples);
       }
 
-      objects.clear();
+      swapchainCreateInfo.width = width;
+      swapchainCreateInfo.height = height;
 
-      Queue transferQueue;
-      pkGetQueue(device, QueueType::Transfer, &transferQueue);
-      CmdBuffer cmdBuffer;
-      pkCreateCmdBuffer(transferQueue, &cmdBuffer);
+      pkRecreateSwapchain(device, &swapchainCreateInfo, swapchain);
 
-      for (int i = 0; i < 100; ++i) {
-        addRandomObject(device, cmdBuffer, width, height, samples);
-      }
-      submit(transferQueue,
-             &cmdBuffer,
-             1,
-             nullptr,
-             nullptr,
-             0,
-             &transferDone,
-             1,
-             nullptr);
+      textureCreateInfo.width = width;
+      textureCreateInfo.height = height;
+      pkDestroyTexture(device, depthTexture);
+      pkCreateTexture(device, &textureCreateInfo, &depthTexture);
     }
 
     {
-      Queue graphicsQueue;
       CmdBuffer cmdBuffer;
 
-      pkGetQueue(device, QueueType::Graphics, &graphicsQueue);
       pkCreateCmdBuffer(graphicsQueue, &cmdBuffer);
 
       // transfer buffer ownership to graphics queue
-      if (!initDone) {
-        // initDone = true;
+      if (!initDone)
+      {
+        initDone = true;
 
-        for (auto& obj : objects) {
+        for (auto &obj : objects)
+        {
           auto barrier = indexBufferTransferToGraphics(obj.mesh.ibuf);
           insertBarrier(cmdBuffer, &barrier);
           barrier = vertexBufferTransferToGraphics(obj.mesh.vbuf);
@@ -390,25 +407,23 @@ main()
       }
 
       auto tbarrier = TextureBarrier{
-        { PipelineStageFlagBits::TOP_OF_PIPE_BIT, 0, QueueType::Graphics },
-        { PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
-          AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT |
-            AccessFlagBits::COLOR_ATTACHMENT_READ_BIT,
-          QueueType::Graphics },
-        TextureLayout::UNDEFINED,
-        TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
-        swapchainTexture
-      };
+          {PipelineStageFlagBits::TOP_OF_PIPE_BIT, 0, QueueType::Graphics},
+          {PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
+           AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT |
+               AccessFlagBits::COLOR_ATTACHMENT_READ_BIT,
+           QueueType::Graphics},
+          TextureLayout::UNDEFINED,
+          TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
+          swapchainTexture};
 
       insertBarrier(cmdBuffer, &tbarrier);
 
       tbarrier.dst = {
-        PipelineStageFlagBits::GRAPHICS_EARLY_FRAGMENT_TESTS_BIT |
-          PipelineStageFlagBits::GRAPHICS_LATE_FRAGMENT_TESTS_BIT,
-        AccessFlagBits::DEPTH_STENCIL_ATTACHMENT_READ_BIT |
-          AccessFlagBits::DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-        QueueType::Graphics
-      };
+          PipelineStageFlagBits::GRAPHICS_EARLY_FRAGMENT_TESTS_BIT |
+              PipelineStageFlagBits::GRAPHICS_LATE_FRAGMENT_TESTS_BIT,
+          AccessFlagBits::DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+              AccessFlagBits::DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+          QueueType::Graphics};
       tbarrier.finalLayout = TextureLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
       tbarrier.texture = depthTexture;
 
@@ -416,14 +431,14 @@ main()
 
       RenderPass renderPass = {};
       renderPass.attachmentCnt = 2;
-      renderPass.attachmentInfos[0].clearValue = { 0., 0., 0., 1 };
+      renderPass.attachmentInfos[0].clearValue = {0., 1., 0., 1};
       renderPass.attachmentInfos[0].texture = swapchainTexture;
       renderPass.attachmentInfos[0].type = AttachmentType::COLOR;
       renderPass.attachmentInfos[0].loadOp = LoadOp::CLEAR;
       renderPass.attachmentInfos[0].storeOp = StoreOp::STORE;
       renderPass.attachmentInfos[0].makePresentable = false;
 
-      renderPass.attachmentInfos[1].clearValue = { 1.f };
+      renderPass.attachmentInfos[1].clearValue = {1.f};
       renderPass.attachmentInfos[1].texture = depthTexture;
       renderPass.attachmentInfos[1].type = AttachmentType::DEPTH;
       renderPass.attachmentInfos[1].loadOp = LoadOp::CLEAR;
@@ -435,18 +450,18 @@ main()
       // draw all objects
 
       objIdx = 0;
-      for (auto const& obj : objects) {
+      for (auto const &obj : objects)
+      {
         bindVertexBuffer(cmdBuffer, obj.mesh.vbuf, 0);
         bindIndexBuffer(cmdBuffer, obj.mesh.ibuf);
         bindUniformBuffer(
-          cmdBuffer,
-          uniforms.buffer,
-          0,
-          0,
-          offset +
-            objIdx *
-              sizeof(obj.mvp), // has to be aligned to required device aligned
-          sizeof(obj.mvp));
+            cmdBuffer,
+            uniforms.buffer,
+            0,
+            0,
+            offset +
+                objIdx * OBJ_DATA_SIZE, // has to be aligned to required device aligned
+            sizeof(obj.mvp));
 
         setPipelineState(cmdBuffer, &obj.material.pipeline);
         drawIndexed(cmdBuffer, obj.mesh.triCnt * 3);
@@ -456,14 +471,13 @@ main()
       endRenderPass(cmdBuffer);
 
       tbarrier.src = {
-        PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
-        AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT |
-          AccessFlagBits::COLOR_ATTACHMENT_READ_BIT,
-        QueueType::Graphics
-      };
-      tbarrier.dst = { PipelineStageFlagBits::BOTTOM_OF_PIPE_BIT,
-                       0,
-                       QueueType::Graphics };
+          PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
+          AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT |
+              AccessFlagBits::COLOR_ATTACHMENT_READ_BIT,
+          QueueType::Graphics};
+      tbarrier.dst = {PipelineStageFlagBits::BOTTOM_OF_PIPE_BIT,
+                      0,
+                      QueueType::Graphics};
       tbarrier.initialLayout = TextureLayout::COLOR_ATTACHMENT_OPTIMAL;
       tbarrier.finalLayout = TextureLayout::PRESENT_SRC_KHR;
       tbarrier.texture = swapchainTexture;
@@ -481,7 +495,7 @@ main()
       waitStages[0] = PipelineStageFlagBits::GRAPHICS_VERTEX_INPUT_BIT |
                       PipelineStageFlagBits::GRAPHICS_VERTEX_SHADER_BIT;
       waitStages[1] =
-        PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT;
+          PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT;
 
       submit(graphicsQueue,
              &cmdBuffer,
@@ -492,9 +506,28 @@ main()
              &renderDone,
              1,
              &fence);
+
       uniforms.Inc(fence);
 
-      present(graphicsQueue, swapchain, &renderDone);
+      if (!present(graphicsQueue, swapchain, &renderDone))
+      {
+        glfwGetWindowSize(window, &width, &height);
+
+        for (auto &obj : objects)
+        {
+          obj.material = getMaterial(width, height, samples);
+        }
+
+        swapchainCreateInfo.width = width;
+        swapchainCreateInfo.height = height;
+
+        pkRecreateSwapchain(device, &swapchainCreateInfo, swapchain);
+
+        textureCreateInfo.width = width;
+        textureCreateInfo.height = height;
+        pkDestroyTexture(device, depthTexture);
+        pkCreateTexture(device, &textureCreateInfo, &depthTexture);
+      }
     }
 
     frame(device);

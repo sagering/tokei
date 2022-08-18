@@ -30,20 +30,20 @@ struct MVP
   glm::mat4 proj;
 };
 
-Mesh
-uploadSuzanne(Device device, CmdBuffer cmdBuffer)
+Mesh uploadSuzanne(Device device, CmdBuffer cmdBuffer)
 {
-  fastObjMesh* mesh = fast_obj_read("resources/meshes/suzanne.obj");
+  fastObjMesh *mesh = fast_obj_read("resources/meshes/suzanne.obj");
   uint32_t vbuf_size = sizeof(float) * 3 * mesh->position_count;
   uint32_t ibuf_size = 3 * mesh->face_count * sizeof(uint32_t);
 
-  Mesh result = { 0, 0, mesh->face_count };
+  Mesh result = {0, 0, mesh->face_count};
 
   {
     // asserting that all facse are triangles
     auto idxCnt = 0;
 
-    for (unsigned int i = 0; i < mesh->face_count; ++i) {
+    for (unsigned int i = 0; i < mesh->face_count; ++i)
+    {
       idxCnt += 3 * (mesh->face_vertices[i] - 2);
     }
 
@@ -51,7 +51,7 @@ uploadSuzanne(Device device, CmdBuffer cmdBuffer)
   }
 
   { // vertices
-    void* data;
+    void *data;
     Buffer stagingBuffer;
     BufferCreateInfo bufferCreateInfo;
     bufferCreateInfo.size = vbuf_size;
@@ -64,7 +64,7 @@ uploadSuzanne(Device device, CmdBuffer cmdBuffer)
     bufferCreateInfo.usageFlags = BufferUsageFlagBits::BUF_TRANSFER_DST |
                                   BufferUsageFlagBits::BUF_VERTEX_BUFFER;
     bufferCreateInfo.memoryUsage = MemoryUsage::GPU_ONLY;
-    void* dummy;
+    void *dummy;
     pkCreateBuffer(device, &bufferCreateInfo, &result.vbuf, &dummy);
 
     pkCopy(cmdBuffer, result.vbuf, stagingBuffer);
@@ -75,11 +75,12 @@ uploadSuzanne(Device device, CmdBuffer cmdBuffer)
     std::vector<uint32_t> positionIndices;
     positionIndices.reserve(mesh->face_count * 3);
 
-    for (uint32_t i = 0; i < mesh->face_count * 3; ++i) {
+    for (uint32_t i = 0; i < mesh->face_count * 3; ++i)
+    {
       positionIndices.push_back(mesh->indices[i].p);
     }
 
-    void* data;
+    void *data;
     Buffer stagingBuffer;
     BufferCreateInfo bufferCreateInfo;
     bufferCreateInfo.size = ibuf_size;
@@ -92,22 +93,21 @@ uploadSuzanne(Device device, CmdBuffer cmdBuffer)
     bufferCreateInfo.usageFlags = BufferUsageFlagBits::BUF_TRANSFER_DST |
                                   BufferUsageFlagBits::BUF_INDEX_BUFFER;
     bufferCreateInfo.memoryUsage = MemoryUsage::GPU_ONLY;
-    void* dummy;
+    void *dummy;
     pkCreateBuffer(device, &bufferCreateInfo, &result.ibuf, &dummy);
     pkCopy(cmdBuffer, result.ibuf, stagingBuffer);
     pkDestroyBuffer(device, stagingBuffer);
   }
 
   auto barrier = BufferBarrier{
-    SynchronizationScope{ PipelineStageFlagBits::TRANSFER_BIT,
-                          AccessFlagBits::TRANSFER_WRITE_BIT,
-                          QueueType::Transfer },
-    SynchronizationScope{ PipelineStageFlagBits::GRAPHICS_VERTEX_INPUT_BIT |
-                            PipelineStageFlagBits::GRAPHICS_VERTEX_SHADER_BIT,
-                          AccessFlagBits::VERTEX_ATTRIBUTE_READ_BIT,
-                          QueueType::Graphics },
-    result.vbuf
-  };
+      SynchronizationScope{PipelineStageFlagBits::TRANSFER_BIT,
+                           AccessFlagBits::TRANSFER_WRITE_BIT,
+                           QueueType::Transfer},
+      SynchronizationScope{PipelineStageFlagBits::GRAPHICS_VERTEX_INPUT_BIT |
+                               PipelineStageFlagBits::GRAPHICS_VERTEX_SHADER_BIT,
+                           AccessFlagBits::VERTEX_ATTRIBUTE_READ_BIT,
+                           QueueType::Graphics},
+      result.vbuf};
 
   insertBarrier(cmdBuffer, &barrier);
 
@@ -121,8 +121,7 @@ uploadSuzanne(Device device, CmdBuffer cmdBuffer)
   return result;
 }
 
-int
-main()
+int main()
 {
   glfwInit();
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -158,8 +157,7 @@ main()
   swapchainCreateInfo.format = PixelFormat::RGBA8_UNORM_SRGB;
   swapchainCreateInfo.usageFlags = TextureUsageFlagBits::TEX_COLOR_ATTACHMENT;
   swapchainCreateInfo.textureCnt = 3;
-  swapchainCreateInfo.platformHandle = (void*)hwnd;
-  swapchainCreateInfo.oldSwapchain = nullptr;
+  swapchainCreateInfo.platformHandle = (void *)hwnd;
 
   Swapchain swapchain;
   pkCreateSwapchain(device, &swapchainCreateInfo, &swapchain);
@@ -189,7 +187,7 @@ main()
   state.viewport.viewport.y = 0;
   state.viewport.viewport.width = static_cast<float>(swapchainCreateInfo.width);
   state.viewport.viewport.height =
-    static_cast<float>(swapchainCreateInfo.height);
+      static_cast<float>(swapchainCreateInfo.height);
   state.viewport.viewport.minDepth = 0.f;
   state.viewport.viewport.maxDepth = 1.f;
   state.viewport.scissors.x = 0;
@@ -207,11 +205,11 @@ main()
   mvp.proj = glm::identity<glm::mat4>();
 
   mvp.model =
-    glm::scale(mvp.model, glm::vec3{ 0.7f, -0.7f, 0.1f }); // scale down, flip y
-  mvp.model = glm::translate(mvp.model, glm::vec3{ 0, 0, 1.f }); // move closer
+      glm::scale(mvp.model, glm::vec3{0.7f, -0.7f, 0.1f});     // scale down, flip y
+  mvp.model = glm::translate(mvp.model, glm::vec3{0, 0, 1.f}); // move closer
 
   Buffer uniformBuffer;
-  void* data;
+  void *data;
   BufferCreateInfo bufferCreateInfo;
   bufferCreateInfo.size = sizeof(mvp);
   bufferCreateInfo.usageFlags = BufferUsageFlagBits::BUF_UNIFORM_BUFFER |
@@ -220,7 +218,8 @@ main()
 
   pkCreateBuffer(device, &bufferCreateInfo, &uniformBuffer, &data);
 
-  while (true) {
+  while (true)
+  {
     Texture swapchainTexture;
 
     // mvp.model = glm::rotate(mvp.model, 0.02f, glm::vec3{ 0, 1, 0 });
@@ -228,9 +227,8 @@ main()
     memcpy(data, &mvp, sizeof(mvp));
 
     Semaphore available;
-    if (!acquireNext(device, swapchain, &swapchainTexture, &available)) {
-      pkDestroySwapchain(device, swapchain);
-
+    while (!acquireNext(device, swapchain, &swapchainTexture, &available))
+    {
       glfwGetWindowSize(window, &width, &height);
       state.viewport.scissors.width = width;
       state.viewport.scissors.height = height;
@@ -239,9 +237,8 @@ main()
 
       swapchainCreateInfo.width = width;
       swapchainCreateInfo.height = height;
-      swapchainCreateInfo.oldSwapchain = swapchain;
 
-      pkCreateSwapchain(device, &swapchainCreateInfo, &swapchain);
+      pkRecreateSwapchain(device, &swapchainCreateInfo, swapchain);
     }
 
     Queue queue;
@@ -250,36 +247,36 @@ main()
     pkGetQueue(device, QueueType::Graphics, &queue);
     pkCreateCmdBuffer(queue, &cmdBuffer);
 
-    if (!mesh.vbuf) {
+    if (!mesh.vbuf)
+    {
       mesh = uploadSuzanne(device, cmdBuffer);
     }
 
     auto textureBarrier = TextureBarrier{
-      SynchronizationScope{ PipelineStageFlagBits::TOP_OF_PIPE_BIT, 0 },
-      SynchronizationScope{
-        PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
-        AccessFlagBits::COLOR_ATTACHMENT_READ_BIT |
-          AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT },
-      TextureLayout::UNDEFINED,
-      TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
-      multiSampleTexture
-    };
+        SynchronizationScope{PipelineStageFlagBits::TOP_OF_PIPE_BIT, 0},
+        SynchronizationScope{
+            PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
+            AccessFlagBits::COLOR_ATTACHMENT_READ_BIT |
+                AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT},
+        TextureLayout::UNDEFINED,
+        TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
+        multiSampleTexture};
 
     insertBarrier(cmdBuffer, &textureBarrier);
-	textureBarrier.texture = swapchainTexture;
+    textureBarrier.texture = swapchainTexture;
     insertBarrier(cmdBuffer, &textureBarrier);
 
     RenderPass renderPass = {};
     renderPass.attachmentCnt = 2;
 
-    renderPass.attachmentInfos[0].clearValue = { 0., 0., 0., 1 };
+    renderPass.attachmentInfos[0].clearValue = {0., 0., 0., 1};
     renderPass.attachmentInfos[0].texture = swapchainTexture;
     renderPass.attachmentInfos[0].type = AttachmentType::RESOLVE;
     renderPass.attachmentInfos[0].loadOp = LoadOp::CLEAR;
     renderPass.attachmentInfos[0].storeOp = StoreOp::STORE;
     renderPass.attachmentInfos[0].makePresentable = false;
 
-    renderPass.attachmentInfos[1].clearValue = { 0., 0., 0., 1 };
+    renderPass.attachmentInfos[1].clearValue = {0., 0., 0., 1};
     renderPass.attachmentInfos[1].texture = multiSampleTexture;
     renderPass.attachmentInfos[1].type = AttachmentType::COLOR;
     renderPass.attachmentInfos[1].loadOp = LoadOp::CLEAR;
@@ -300,20 +297,19 @@ main()
     endRenderPass(cmdBuffer);
 
     textureBarrier = TextureBarrier{
-      SynchronizationScope{
-        PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
-        AccessFlagBits::COLOR_ATTACHMENT_READ_BIT |
-          AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT },
-      SynchronizationScope{
-        PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
-        AccessFlagBits::COLOR_ATTACHMENT_READ_BIT |
-          AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT },
-      TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
-      TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
-      multiSampleTexture
-    };
+        SynchronizationScope{
+            PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
+            AccessFlagBits::COLOR_ATTACHMENT_READ_BIT |
+                AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT},
+        SynchronizationScope{
+            PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
+            AccessFlagBits::COLOR_ATTACHMENT_READ_BIT |
+                AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT},
+        TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
+        TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
+        multiSampleTexture};
 
-	// render again and overwrite the left side of the anti aliased image
+    // render again and overwrite the left side of the anti aliased image
     renderPass.attachmentCnt = 1;
     renderPass.attachmentInfos[0].type = AttachmentType::COLOR;
     renderPass.attachmentInfos[0].loadOp = LoadOp::LOAD;
@@ -332,15 +328,14 @@ main()
     endRenderPass(cmdBuffer);
 
     textureBarrier = TextureBarrier{
-      SynchronizationScope{
-        PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
-        AccessFlagBits::COLOR_ATTACHMENT_READ_BIT |
-          AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT },
-      SynchronizationScope{ PipelineStageFlagBits::BOTTOM_OF_PIPE_BIT, 0 },
-      TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
-      TextureLayout::PRESENT_SRC_KHR,
-      swapchainTexture
-    };
+        SynchronizationScope{
+            PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
+            AccessFlagBits::COLOR_ATTACHMENT_READ_BIT |
+                AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT},
+        SynchronizationScope{PipelineStageFlagBits::BOTTOM_OF_PIPE_BIT, 0},
+        TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
+        TextureLayout::PRESENT_SRC_KHR,
+        swapchainTexture};
 
     insertBarrier(cmdBuffer, &textureBarrier);
 
@@ -361,9 +356,8 @@ main()
            1,
            nullptr);
 
-    if (!present(queue, swapchain, &renderDone)) {
-      pkDestroySwapchain(device, swapchain);
-
+    if (!present(queue, swapchain, &renderDone))
+    {
       glfwGetWindowSize(window, &width, &height);
       state.viewport.scissors.width = width;
       state.viewport.scissors.height = height;
@@ -372,9 +366,8 @@ main()
 
       swapchainCreateInfo.width = width;
       swapchainCreateInfo.height = height;
-      swapchainCreateInfo.oldSwapchain = swapchain;
 
-      pkCreateSwapchain(device, &swapchainCreateInfo, &swapchain);
+      pkRecreateSwapchain(device, &swapchainCreateInfo, swapchain);
     }
 
     frame(device);

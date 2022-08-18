@@ -33,10 +33,9 @@ struct UBO
   glm::vec3 cameraPos;
 };
 
-Mesh
-uploadMesh(Device device, CmdBuffer cmdBuffer)
+Mesh uploadMesh(Device device, CmdBuffer cmdBuffer)
 {
-  fastObjMesh* mesh = fast_obj_read("resources/meshes/dragon.obj");
+  fastObjMesh *mesh = fast_obj_read("resources/meshes/dragon.obj");
   Mesh result = {};
 
   result.vertexCnt = mesh->face_count * 3;
@@ -46,7 +45,8 @@ uploadMesh(Device device, CmdBuffer cmdBuffer)
     // asserting that all faces are triangles
     auto idxCnt = 0;
 
-    for (unsigned int i = 0; i < mesh->face_count; ++i) {
+    for (unsigned int i = 0; i < mesh->face_count; ++i)
+    {
       idxCnt += 3 * (mesh->face_vertices[i] - 2);
     }
 
@@ -55,7 +55,8 @@ uploadMesh(Device device, CmdBuffer cmdBuffer)
 
   std::vector<float> vertices = {};
 
-  for (uint32_t i = 0; i < result.vertexCnt; ++i) {
+  for (uint32_t i = 0; i < result.vertexCnt; ++i)
+  {
     vertices.push_back(mesh->positions[mesh->indices[i].p * 3 + 0]);
     vertices.push_back(mesh->positions[mesh->indices[i].p * 3 + 1]);
     vertices.push_back(mesh->positions[mesh->indices[i].p * 3 + 2]);
@@ -67,7 +68,7 @@ uploadMesh(Device device, CmdBuffer cmdBuffer)
   fast_obj_destroy(mesh);
 
   { // vertices
-    void* data;
+    void *data;
     Buffer stagingBuffer;
     BufferCreateInfo bufferCreateInfo;
     bufferCreateInfo.size = size;
@@ -87,15 +88,14 @@ uploadMesh(Device device, CmdBuffer cmdBuffer)
     pkDestroyBuffer(device, stagingBuffer);
   }
   auto barrier = BufferBarrier{
-    SynchronizationScope{ PipelineStageFlagBits::TRANSFER_BIT,
-                          AccessFlagBits::TRANSFER_WRITE_BIT,
-                          QueueType::Transfer },
-    SynchronizationScope{ PipelineStageFlagBits::GRAPHICS_VERTEX_INPUT_BIT |
-                            PipelineStageFlagBits::GRAPHICS_VERTEX_SHADER_BIT,
-                          AccessFlagBits::VERTEX_ATTRIBUTE_READ_BIT,
-                          QueueType::Graphics },
-    result.vertexBuffer
-  };
+      SynchronizationScope{PipelineStageFlagBits::TRANSFER_BIT,
+                           AccessFlagBits::TRANSFER_WRITE_BIT,
+                           QueueType::Transfer},
+      SynchronizationScope{PipelineStageFlagBits::GRAPHICS_VERTEX_INPUT_BIT |
+                               PipelineStageFlagBits::GRAPHICS_VERTEX_SHADER_BIT,
+                           AccessFlagBits::VERTEX_ATTRIBUTE_READ_BIT,
+                           QueueType::Graphics},
+      result.vertexBuffer};
 
   insertBarrier(cmdBuffer, &barrier);
 
@@ -113,7 +113,7 @@ pkCreateDepthTexture(Device device, int width, int height)
   textureCreateInfo.mipLevels = 1;
   textureCreateInfo.layers = 1;
   textureCreateInfo.usageFlags =
-    TextureUsageFlagBits::TEX_DEPTH_STENCIL_ATTACHMENT;
+      TextureUsageFlagBits::TEX_DEPTH_STENCIL_ATTACHMENT;
 
   Texture texture;
   pkCreateTexture(device, &textureCreateInfo, &texture);
@@ -121,8 +121,7 @@ pkCreateDepthTexture(Device device, int width, int height)
   return texture;
 }
 
-int
-main()
+int main()
 {
   glfwInit();
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -143,8 +142,7 @@ main()
   swapchainCreateInfo.format = PixelFormat::RGBA8_UNORM_SRGB;
   swapchainCreateInfo.usageFlags = TextureUsageFlagBits::TEX_COLOR_ATTACHMENT;
   swapchainCreateInfo.textureCnt = 3;
-  swapchainCreateInfo.platformHandle = (void*)hwnd;
-  swapchainCreateInfo.oldSwapchain = nullptr;
+  swapchainCreateInfo.platformHandle = (void *)hwnd;
 
   Swapchain swapchain;
   pkCreateSwapchain(device, &swapchainCreateInfo, &swapchain);
@@ -179,7 +177,7 @@ main()
   state.viewport.viewport.y = 0;
   state.viewport.viewport.width = static_cast<float>(swapchainCreateInfo.width);
   state.viewport.viewport.height =
-    static_cast<float>(swapchainCreateInfo.height);
+      static_cast<float>(swapchainCreateInfo.height);
   state.viewport.viewport.minDepth = 0.f;
   state.viewport.viewport.maxDepth = 1.f;
   state.viewport.scissors.x = 0;
@@ -197,7 +195,7 @@ main()
   UBO ubo = {};
 
   Buffer uniformBuffer;
-  void* data;
+  void *data;
   BufferCreateInfo bufferCreateInfo;
   bufferCreateInfo.size = sizeof(ubo);
   bufferCreateInfo.usageFlags = BufferUsageFlagBits::BUF_UNIFORM_BUFFER |
@@ -206,23 +204,23 @@ main()
 
   pkCreateBuffer(device, &bufferCreateInfo, &uniformBuffer, &data);
 
-  ubo.cameraPos = { 0.f, -18.f, 13.f };
-  ubo.model = glm::scale(glm::identity<glm::mat4>(), { 1.f, -1.f, 1.f });
+  ubo.cameraPos = {0.f, -18.f, 13.f};
+  ubo.model = glm::scale(glm::identity<glm::mat4>(), {1.f, -1.f, 1.f});
   ubo.view =
-    glm::lookAt(ubo.cameraPos, glm::vec3{}, glm::vec3{ 0.f, 1.f, 0.f });
+      glm::lookAt(ubo.cameraPos, glm::vec3{}, glm::vec3{0.f, 1.f, 0.f});
   ubo.proj =
-    glm::perspective(50.f / 180.f * glm::pi<float>(), 1.f, 0.1f, 1000.f);
+      glm::perspective(50.f / 180.f * glm::pi<float>(), 1.f, 0.1f, 1000.f);
 
-  while (true) {
+  while (true)
+  {
     Texture swapchainTexture;
 
-    ubo.model = glm::rotate(ubo.model, 0.0002f, glm::vec3{ 0, 1, 0 });
+    ubo.model = glm::rotate(ubo.model, 0.0002f, glm::vec3{0, 1, 0});
     memcpy(data, &ubo, sizeof(ubo));
 
     Semaphore available;
-    if (!acquireNext(device, swapchain, &swapchainTexture, &available)) {
-      pkDestroySwapchain(device, swapchain);
-
+    while (!acquireNext(device, swapchain, &swapchainTexture, &available))
+    {
       glfwGetWindowSize(window, &width, &height);
       state.viewport.scissors.width = width;
       state.viewport.scissors.height = height;
@@ -231,9 +229,8 @@ main()
 
       swapchainCreateInfo.width = width;
       swapchainCreateInfo.height = height;
-      swapchainCreateInfo.oldSwapchain = swapchain;
 
-      pkCreateSwapchain(device, &swapchainCreateInfo, &swapchain);
+      pkRecreateSwapchain(device, &swapchainCreateInfo, swapchain);
       pkDestroyTexture(device, depthTexture);
       depthTexture = pkCreateDepthTexture(device, width, height);
     }
@@ -244,44 +241,43 @@ main()
     pkGetQueue(device, QueueType::Graphics, &queue);
     pkCreateCmdBuffer(queue, &cmdBuffer);
 
-    if (!mesh.vertexBuffer) {
+    if (!mesh.vertexBuffer)
+    {
       mesh = uploadMesh(device, cmdBuffer);
     }
 
     auto textureBarrier = TextureBarrier{
-      SynchronizationScope{ PipelineStageFlagBits::TOP_OF_PIPE_BIT, 0 },
-      SynchronizationScope{
-        PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
-        AccessFlagBits::COLOR_ATTACHMENT_READ_BIT |
-          AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT },
-      TextureLayout::UNDEFINED,
-      TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
-      swapchainTexture
-    };
+        SynchronizationScope{PipelineStageFlagBits::TOP_OF_PIPE_BIT, 0},
+        SynchronizationScope{
+            PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
+            AccessFlagBits::COLOR_ATTACHMENT_READ_BIT |
+                AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT},
+        TextureLayout::UNDEFINED,
+        TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
+        swapchainTexture};
 
     insertBarrier(cmdBuffer, &textureBarrier);
 
     textureBarrier.dst = SynchronizationScope{
-      PipelineStageFlagBits::GRAPHICS_EARLY_FRAGMENT_TESTS_BIT |
-        PipelineStageFlagBits::GRAPHICS_LATE_FRAGMENT_TESTS_BIT,
-      AccessFlagBits::DEPTH_STENCIL_ATTACHMENT_READ_BIT |
-        AccessFlagBits::DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
-    };
+        PipelineStageFlagBits::GRAPHICS_EARLY_FRAGMENT_TESTS_BIT |
+            PipelineStageFlagBits::GRAPHICS_LATE_FRAGMENT_TESTS_BIT,
+        AccessFlagBits::DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+            AccessFlagBits::DEPTH_STENCIL_ATTACHMENT_WRITE_BIT};
     textureBarrier.finalLayout =
-      TextureLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        TextureLayout::DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
     textureBarrier.texture = depthTexture;
 
     insertBarrier(cmdBuffer, &textureBarrier);
 
     RenderPass renderPass = {};
     renderPass.attachmentCnt = 2;
-    renderPass.attachmentInfos[0].clearValue = { 0., 0., 0., 1 };
+    renderPass.attachmentInfos[0].clearValue = {0., 0., 0., 1};
     renderPass.attachmentInfos[0].texture = swapchainTexture;
     renderPass.attachmentInfos[0].type = AttachmentType::COLOR;
     renderPass.attachmentInfos[0].loadOp = LoadOp::CLEAR;
     renderPass.attachmentInfos[0].storeOp = StoreOp::STORE;
 
-    renderPass.attachmentInfos[1].clearValue = { 1.f };
+    renderPass.attachmentInfos[1].clearValue = {1.f};
     renderPass.attachmentInfos[1].texture = depthTexture;
     renderPass.attachmentInfos[1].type = AttachmentType::DEPTH;
     renderPass.attachmentInfos[1].loadOp = LoadOp::CLEAR;
@@ -295,15 +291,14 @@ main()
     endRenderPass(cmdBuffer);
 
     textureBarrier = TextureBarrier{
-      SynchronizationScope{
-        PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
-        AccessFlagBits::COLOR_ATTACHMENT_READ_BIT |
-          AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT },
-      SynchronizationScope{ PipelineStageFlagBits::BOTTOM_OF_PIPE_BIT, 0 },
-      TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
-      TextureLayout::PRESENT_SRC_KHR,
-      swapchainTexture
-    };
+        SynchronizationScope{
+            PipelineStageFlagBits::GRAPHICS_COLOR_ATTACHMENT_OUTPUT_BIT,
+            AccessFlagBits::COLOR_ATTACHMENT_READ_BIT |
+                AccessFlagBits::COLOR_ATTACHMENT_WRITE_BIT},
+        SynchronizationScope{PipelineStageFlagBits::BOTTOM_OF_PIPE_BIT, 0},
+        TextureLayout::COLOR_ATTACHMENT_OPTIMAL,
+        TextureLayout::PRESENT_SRC_KHR,
+        swapchainTexture};
 
     insertBarrier(cmdBuffer, &textureBarrier);
 
@@ -324,9 +319,8 @@ main()
            1,
            nullptr);
 
-    if (!present(queue, swapchain, &renderDone)) {
-      pkDestroySwapchain(device, swapchain);
-
+    if (!present(queue, swapchain, &renderDone))
+    {
       glfwGetWindowSize(window, &width, &height);
       state.viewport.scissors.width = width;
       state.viewport.scissors.height = height;
@@ -335,9 +329,9 @@ main()
 
       swapchainCreateInfo.width = width;
       swapchainCreateInfo.height = height;
-      swapchainCreateInfo.oldSwapchain = swapchain;
 
-      pkCreateSwapchain(device, &swapchainCreateInfo, &swapchain);
+      pkRecreateSwapchain(device, &swapchainCreateInfo, swapchain);
+
       pkDestroyTexture(device, depthTexture);
       depthTexture = pkCreateDepthTexture(device, width, height);
     }

@@ -26,19 +26,18 @@ struct Particle
 u32 const particleCnt = (uint16_t)-1;
 Particle particles[particleCnt];
 
-float
-myRand()
+float myRand()
 {
   return 2.f * static_cast<float>(rand()) / RAND_MAX - 1.f;
 }
 
-void
-initParticles()
+void initParticles()
 {
   // random x, y in [-1, 1], z = 0
   // random velocities in the xy plane
 
-  for (auto& particle : particles) {
+  for (auto &particle : particles)
+  {
     particle.position.x = myRand();
     particle.position.y = myRand();
     particle.position.z = 0.f;
@@ -59,20 +58,19 @@ struct Timer
   double now()
   {
     return std::chrono::duration_cast<std::chrono::duration<double>>(
-             std::chrono::steady_clock::now().time_since_epoch())
-      .count();
+               std::chrono::steady_clock::now().time_since_epoch())
+        .count();
   }
 
   double startTime = 0.f;
 };
 
-int
-main()
+int main()
 {
   Timer timer;
   timer.reset();
 
-  UBO ubo = { 0.f, particleCnt };
+  UBO ubo = {0.f, particleCnt};
 
   initParticles();
 
@@ -83,14 +81,14 @@ main()
   state.shader.computeShader = "resources/shaders/compute.comp.spv";
 
   Buffer uniformBuffer;
-  void* uboData;
+  void *uboData;
   BufferCreateInfo bufferCreateInfo;
   bufferCreateInfo.size = sizeof(ubo);
   bufferCreateInfo.usageFlags = BufferUsageFlagBits::BUF_UNIFORM_BUFFER;
   bufferCreateInfo.memoryUsage = MemoryUsage::CPU_TO_GPU;
   pkCreateBuffer(device, &bufferCreateInfo, &uniformBuffer, &uboData);
 
-  void* stagingBufferData;
+  void *stagingBufferData;
   Buffer stagingBuffer;
   bufferCreateInfo.size = sizeof(Particle) * particleCnt;
   bufferCreateInfo.usageFlags = BufferUsageFlagBits::BUF_TRANSFER_DST |
@@ -106,7 +104,7 @@ main()
                                 BufferUsageFlagBits::BUF_TRANSFER_DST |
                                 BufferUsageFlagBits::BUF_TRANSFER_SRC;
   bufferCreateInfo.memoryUsage = MemoryUsage::GPU_ONLY;
-  void* dummy;
+  void *dummy;
   pkCreateBuffer(device, &bufferCreateInfo, &storageBuffer, &dummy);
 
   {
@@ -118,18 +116,19 @@ main()
     pkCopy(cmdBuffer, storageBuffer, stagingBuffer);
 
     auto bufferBarrier =
-      BufferBarrier{ SynchronizationScope{ PipelineStageFlagBits::TRANSFER_BIT,
-                                           AccessFlagBits::TRANSFER_WRITE_BIT },
-                     SynchronizationScope{ PipelineStageFlagBits::COMPUTE_BIT,
+        BufferBarrier{SynchronizationScope{PipelineStageFlagBits::TRANSFER_BIT,
+                                           AccessFlagBits::TRANSFER_WRITE_BIT},
+                      SynchronizationScope{PipelineStageFlagBits::COMPUTE_BIT,
                                            AccessFlagBits::SHADER_READ_BIT |
-                                             AccessFlagBits::SHADER_WRITE_BIT },
-                     storageBuffer };
+                                               AccessFlagBits::SHADER_WRITE_BIT},
+                      storageBuffer};
 
     insertBarrier(cmdBuffer, &bufferBarrier);
     submit(queue, &cmdBuffer, 1, nullptr, nullptr, 0, nullptr, 0, nullptr);
   }
 
-  while (true) {
+  while (true)
+  {
     ubo.dt = timer.getDt();
     memcpy(uboData, &ubo, sizeof(ubo));
 
@@ -140,28 +139,28 @@ main()
 
     setPipelineState(cmdBuffer, &state);
     bindStorageBuffer(
-      cmdBuffer, storageBuffer, 0, 0, 0, sizeof(Particle) * particleCnt);
+        cmdBuffer, storageBuffer, 0, 0, 0, sizeof(Particle) * particleCnt);
     bindUniformBuffer(cmdBuffer, uniformBuffer, 0, 1, 0, sizeof(UBO));
     dispatch(cmdBuffer, particleCnt, 1, 1);
 
     auto bufferBarrier =
-      BufferBarrier{ SynchronizationScope{ PipelineStageFlagBits::COMPUTE_BIT,
+        BufferBarrier{SynchronizationScope{PipelineStageFlagBits::COMPUTE_BIT,
                                            AccessFlagBits::SHADER_READ_BIT |
-                                             AccessFlagBits::SHADER_WRITE_BIT },
-                     SynchronizationScope{ PipelineStageFlagBits::TRANSFER_BIT,
-                                           AccessFlagBits::TRANSFER_READ_BIT },
-                     storageBuffer };
+                                               AccessFlagBits::SHADER_WRITE_BIT},
+                      SynchronizationScope{PipelineStageFlagBits::TRANSFER_BIT,
+                                           AccessFlagBits::TRANSFER_READ_BIT},
+                      storageBuffer};
 
     insertBarrier(cmdBuffer, &bufferBarrier);
 
     pkCopy(cmdBuffer, stagingBuffer, storageBuffer);
 
     bufferBarrier =
-      BufferBarrier{ SynchronizationScope{ PipelineStageFlagBits::TRANSFER_BIT,
-                                           AccessFlagBits::TRANSFER_WRITE_BIT },
-                     SynchronizationScope{ PipelineStageFlagBits::HOST_BIT,
-                                           AccessFlagBits::HOST_READ_BIT },
-                     stagingBuffer };
+        BufferBarrier{SynchronizationScope{PipelineStageFlagBits::TRANSFER_BIT,
+                                           AccessFlagBits::TRANSFER_WRITE_BIT},
+                      SynchronizationScope{PipelineStageFlagBits::HOST_BIT,
+                                           AccessFlagBits::HOST_READ_BIT},
+                      stagingBuffer};
 
     insertBarrier(cmdBuffer, &bufferBarrier);
 
